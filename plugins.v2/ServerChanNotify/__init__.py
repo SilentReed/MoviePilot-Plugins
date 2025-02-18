@@ -12,14 +12,14 @@ from app.core.config import settings
 
 class ServerChanNotify(_PluginBase):
     # 插件基本信息
-    plugin_name = "Server酱通知插件"
+    plugin_name = "Server酱³通知插件"
     plugin_desc = "实现 Server 酱消息通知功能，适配多种 MoviePilot 通知事件"
     plugin_icon = "serverchan.png"
     plugin_version = "1.0"
     plugin_author = "SilentReed"
     # 作者主页
     author_url = "https://github.com/SilentReed"
-    plugin_config_prefix = "SilentReed_serverchan"
+    plugin_config_prefix = "SilentReed_serverchan_"
     plugin_order = 1
     auth_level = 1
 
