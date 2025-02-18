@@ -4,7 +4,7 @@
         "description": "实现 Server 酱消息通知功能，适配多种 MoviePilot 通知事件",
         "labels": "消息通知",
         "version": "1.0",
-        "icon": "serverchan.png",
+        "icon": "https://sc3.ft07.com/favicon.png",
         "author": "SilentReed",
         "level": 1
     }

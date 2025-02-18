@@ -13,7 +13,7 @@ class ServerChanNotify(_PluginBase):
     # 插件基本信息
     plugin_name = "Server酱³通知插件"
     plugin_desc = "实现 Server 酱消息通知功能，适配多种 MoviePilot 通知事件"
-    plugin_icon = "https://github.com/SilentReed/MoviePilot-Plugins/main/icons/serverchan.png"
+    plugin_icon = "https://sc3.ft07.com/favicon.png"
     plugin_version = "1.0"
     plugin_author = "SilentReed"
     author_url = "https://github.com/SilentReed"
