@@ -5,11 +5,11 @@
         "labels": "消息通知",
         "version": "2.0",
         "icon": "https://raw.githubusercontent.com/SilentReed/MoviePilot-Plugins/main/icons/MergeMessageNotify_121.png",
-        "author": "hotlcc",
+        "author": "SilentReed",
         "level": 1,
         "v2": true,
         "history": {
-            "v2.0": "支持Server酱3。",
+            "v2.0": "支持Server酱³",
             "v1.9": "修复Email发送报错的问题。升级后可能需要重启MP！",
             "v1.8": "优化钉钉渠道消息内容；新增PushMe消息渠道（未经测试，请自测，有问题提issue）。升级后可能需要重启MP！",
             "v1.7": "修复在MPv2中消息类型不生效的问题。",
