@@ -16,15 +16,15 @@ class MergeMessageNotify(_PluginBase):
     # 插件描述
     plugin_desc = "消息通知，一个插件就够了。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/hotlcc/MoviePilot-Plugins-Third/main/icons/MergeMessageNotify_121.png"
+    plugin_icon = "https://github.com/SilentReed/MoviePilot-Plugins/main/icons/MergeMessageNotify_121.png"
     # 插件版本
-    plugin_version = "1.9"
+    plugin_version = "2.0"
     # 插件作者
-    plugin_author = "hotlcc"
+    plugin_author = "SilentReed"
     # 作者主页
-    author_url = "https://github.com/hotlcc"
+    author_url = "https://github.com/SilentReed"
     # 插件配置项ID前缀
-    plugin_config_prefix = "com.hotlcc.mergemessagenotify."
+    plugin_config_prefix = "com.SilentReed.mergemessagenotify."
     # 加载顺序
     plugin_order = 66
     # 可使用的用户级别
