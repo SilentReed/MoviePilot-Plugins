@@ -3,9 +3,7 @@ from app.core.event import eventmanager, Event
 from app.schemas.types import EventType, ChainEventType, NotificationType
 from app.helper.service import ServiceInfo, ServiceConfigHelper, ServiceBaseHelper, NotificationHelper
 import re
-import requests
-
-from urllib.parse import urlencode, quote
+from serverchan_sdk import sc_send
 from typing import Optional, Dict, Any, List, Tuple
 from app.core.config import settings
 
@@ -25,7 +23,6 @@ class ServerChanNotify(_PluginBase):
     # Server 酱配置属性
     _server_jiang_uid = ""
     _server_jiang_sendkey = ""
-    _server_jiang_api_url = ""
     _enable_notify_types = []
     _notification_helper: NotificationHelper = None
 
@@ -41,23 +38,12 @@ class ServerChanNotify(_PluginBase):
             self.setup_v1()
 
         if config:
-            self._server_jiang_uid = config.get("server_jiang_uid", "")
             self._server_jiang_sendkey = config.get("server_jiang_sendkey", "")
-            self._server_jiang_api_url = config.get("server_jiang_api_url", "")
             self._enable_notify_types = config.get("enable_notify_types", [])
 
             # 若 uid 未提供，尝试从 sendkey 中提取
             if not self._server_jiang_uid and self._server_jiang_sendkey:
                 match = re.search(r'^sctp(\d+)t', self._server_jiang_sendkey)
-                if match:
-                    self._server_jiang_uid = match.group(1)
-
-            # 若 API URL 未提供，使用 UID 和 SendKey 生成默认 URL
-            if not self._server_jiang_api_url and self._server_jiang_uid and self._server_jiang_sendkey:
-                self._server_jiang_api_url = f"https://{self._server_jiang_uid}.push.ft07.com/send/{self._server_jiang_sendkey}.send"
-            # 若 UID 未提供，但有 API URL，尝试从 API URL 中提取 UID
-            if not self._server_jiang_uid and self._server_jiang_api_url:
-                match = re.search(r'https://(\d+).push.ft07.com', self._server_jiang_api_url)
                 if match:
                     self._server_jiang_uid = match.group(1)
 
@@ -71,146 +57,109 @@ class ServerChanNotify(_PluginBase):
         """
         获取插件状态
         """
-        return bool(self._server_jiang_api_url)
+        return bool(self._server_jiang_sendkey)
+
+    def _generate_notify_type_options(self):
+        """
+        生成通知类型选项列表
+        """
+        return [
+            {
+                "title": event_type.value,
+                "value": event_type.name
+            } for event_type in list(EventType) + list(ChainEventType) if event_type
+        ]
 
     def get_form(self) -> tuple[list[dict], dict[str, Any]]:
         """
         拼装插件配置页面
         """
-        # 构造消息类型下拉选择元素
-        select_items = [{
-            "title": type.value,
-            "value": type.name
-        } for type in list(EventType) + list(ChainEventType) if type]
+        # 生成通知类型选项
+        notify_type_options = self._generate_notify_type_options()
 
         elements = [
             {
-                'component': 'VRow',
+                'component': 'VForm',
                 'content': [
                     {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12
-                        },
+                        'component': 'VRow',
                         'content': [
                             {
-                                'component': 'VTextField',
+                                'component': 'VCol',
                                 'props': {
-                                    'model': 'server_jiang_uid',
-                                    'label': 'Server 酱 UID',
-                                    'hint': '可从 SendKey 页面获取，或从 sendkey 中提取；与 API URL 二选一'
-                                }
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'server_jiang_sendkey',
+                                            'label': 'Server 酱 SendKey',
+                                            'hint': '从 SendKey 页面获取',
+                                            'rules': [
+                                                lambda value: bool(value) or 'SendKey 不能为空'
+                                            ]
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     },
                     {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12
-                        },
+                        'component': 'VRow',
                         'content': [
                             {
-                                'component': 'VTextField',
+                                'component': 'VCol',
                                 'props': {
-                                    'model': 'server_jiang_sendkey',
-                                    'label': 'Server 酱 SendKey',
-                                    'hint': '从 SendKey 页面获取'
-                                }
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12
-                        },
-                        'content': [
-                            {
-                                'component': 'VTextField',
-                                'props': {
-                                    'model': 'server_jiang_api_url',
-                                    'label': 'Server 酱 API URL',
-                                    'hint': '可直接从 SendKey 页面复制；与 UID 二选一'
-                                }
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12
-                        },
-                        'content': [
-                            {
-                                'component': 'VSelect',
-                                'props': {
-                                    'model': 'enable_notify_types',
-                                    'label': '消息类型',
-                                    'multiple': True,
-                                    'chips': True,
-                                    'clearable': True,
-                                    'items': select_items,
-                                    'hint': '选择哪些类型的消息需要通过此渠道发送，缺省时不限制类型。'
-                                }
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'enable_notify_types',
+                                            'label': '消息类型',
+                                            'multiple': True,
+                                            'chips': True,
+                                            'clearable': True,
+                                            'items': notify_type_options,
+                                            'hint': '选择哪些类型的消息需要通过此渠道发送，缺省时不限制类型。'
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     }
                 ]
             }
         ]
+
         config_suggest = {
-            "server_jiang_uid": "",
             "server_jiang_sendkey": "",
-            "server_jiang_api_url": "",
             "enable_notify_types": []
         }
+
         return elements, config_suggest
 
-    def send_server_jiang_notification(self, title: str, desp: str = "", tags: str = "", short: str = "", method='GET'):
+    def send_server_jiang_notification(self, title: str, desp: str = "", tags: str = ""):
         """
         发送 Server 酱通知
         """
-        if not self._server_jiang_api_url:
+        if not self._server_jiang_sendkey:
             return False
 
-        params = {
-            "title": title,
-            "desp": desp,
-            "tags": tags,
-            "short": short
-        }
-        # 过滤掉空参数
-        params = {k: v for k, v in params.items() if v}
+        options = {}
+        if tags:
+            options["tags"] = tags
 
-        if method == 'GET':
-            # 对参数进行 URL 编码
-            encoded_params = urlencode({k: quote(str(v)) if isinstance(v, str) else v for k, v in params.items()})
-            url = f"{self._server_jiang_api_url}?{encoded_params}"
-            try:
-                response = requests.get(url)
-                if response.status_code == 200:
-                    result = response.json()
-                    if result.get("errno") == 0:
-                        return True
-                    else:
-                        print(f"Server 酱通知发送失败，错误信息: {result.get('errmsg')}")
-                else:
-                    print(f"Server 酱通知请求失败，状态码: {response.status_code}")
-            except Exception as e:
-                print(f"Server 酱通知发送出错: {e}")
-        elif method == 'POST':
-            try:
-                response = requests.post(self._server_jiang_api_url, data=params)
-                if response.status_code == 200:
-                    result = response.json()
-                    if result.get("errno") == 0:
-                        return True
-                    else:
-                        print(f"Server 酱通知发送失败，错误信息: {result.get('errmsg')}")
-                else:
-                    print(f"Server 酱通知请求失败，状态码: {response.status_code}")
-            except Exception as e:
-                print(f"Server 酱通知发送出错: {e}")
+        try:
+            response = sc_send(self._server_jiang_sendkey, title, desp, options)
+            if response.get("errno") == 0:
+                return True
+            else:
+                print(f"Server 酱通知发送失败，错误信息: {response.get('errmsg')}")
+        except Exception as e:
+            print(f"Server 酱通知发送出错: {e}")
         return False
 
     def handle_notification_event(self, event: Event):
