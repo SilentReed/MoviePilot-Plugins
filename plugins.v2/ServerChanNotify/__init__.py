@@ -17,9 +17,9 @@ class ServerChanNotify(_PluginBase):
     plugin_icon = "serverchan.png"
     plugin_version = "1.0"
     plugin_author = "SilentReed"
-    plugin_config_prefix = "SilentReed_serverchan"
     # 作者主页
     author_url = "https://github.com/SilentReed"
+    plugin_config_prefix = "SilentReed_serverchan"
     plugin_order = 1
     auth_level = 1
 
