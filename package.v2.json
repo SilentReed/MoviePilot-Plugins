@@ -1,0 +1,14 @@
+{
+    "ServerChanNotify": {
+        "name": "Server酱通知插件",
+        "description": "实现 Server 酱消息通知功能，适配多种 MoviePilot 通知事件",
+        "labels": "消息通知",
+        "version": "1.0",
+        "icon": "serverchan.png",
+        "author": "SilentReed",
+        "level": 1,
+        "history": {
+            "v1.0": "初始版本。"
+        }
+    }
+}
