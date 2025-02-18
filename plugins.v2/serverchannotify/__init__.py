@@ -6,6 +6,7 @@ import re
 from serverchan_sdk import sc_send
 from typing import Optional, Dict, Any, List, Tuple
 from app.core.config import settings
+from app.log import logger
 
 
 class ServerChanNotify(_PluginBase):
@@ -28,6 +29,7 @@ class ServerChanNotify(_PluginBase):
     _send_test = False
 
     def init_plugin(self, config: dict = None):
+        logger.info(f"Initializing plugin with config: {config}")
         if hasattr(settings, 'VERSION_FLAG'):
             version = settings.VERSION_FLAG  # V2
         else:
@@ -63,9 +65,10 @@ class ServerChanNotify(_PluginBase):
 
     def setup_v2(self):
         self._notification_helper = NotificationHelper()
+        logger.info("Setup for V2 version completed.")
 
     def setup_v1(self):
-        pass
+        logger.info("Setup for V1 version completed.")
 
     def __update_config(self):
         """
@@ -77,12 +80,12 @@ class ServerChanNotify(_PluginBase):
             "send_test": self._send_test
         }
         self.update_config(config)
+        logger.info(f"Plugin configuration updated: {config}")
 
     def get_state(self) -> bool:
-        """
-        获取插件状态
-        """
-        return bool(self._server_jiang_sendkey)
+        state = bool(self._server_jiang_sendkey)
+        logger.info(f"Plugin state: {state}")
+        return state
 
     def _generate_notify_type_options(self):
         """
@@ -190,7 +193,9 @@ class ServerChanNotify(_PluginBase):
         """
         发送 Server 酱通知
         """
+        logger.info(f"Sending ServerChan notification: title={title}, desp={desp}, tags={tags}")
         if not self._server_jiang_sendkey:
+            logger.error("ServerChan SendKey is not set.")
             return False
 
         options = {}
@@ -199,12 +204,13 @@ class ServerChanNotify(_PluginBase):
 
         try:
             response = sc_send(self._server_jiang_sendkey, title, desp, options)
+            logger.info(f"ServerChan SDK response: {response}")
             if response.get("errno") == 0:
                 return True
             else:
-                print(f"Server 酱通知发送失败，错误信息: {response.get('errmsg')}")
+                logger.error(f"Server 酱通知发送失败，错误信息: {response.get('errmsg')}")
         except Exception as e:
-            print(f"Server 酱通知发送出错: {e}")
+            logger.error(f"Server 酱通知发送出错: {e}")
         return False
 
     def handle_notification_event(self, event: Event):
@@ -213,7 +219,9 @@ class ServerChanNotify(_PluginBase):
         """
         event_data = event.event_data
         event_type = event.event_type
+        logger.info(f"Handling notification event: {event_type.name}, data={event_data}")
         if self._enable_notify_types and event_type.name not in self._enable_notify_types:
+            logger.info(f"Event type {event_type.name} is not enabled for notification.")
             return
 
         if event_type == EventType.NoticeMessage:
