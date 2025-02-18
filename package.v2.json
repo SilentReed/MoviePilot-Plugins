@@ -4,7 +4,7 @@
         "description": "实现 Server 酱消息通知功能，适配多种 MoviePilot 通知事件",
         "labels": "消息通知",
         "version": "1.0",
-        "icon": "https://github.com/SilentReed/MoviePilot-Plugins/raw/refs/heads/main/icons/serverchan.png",
+        "icon": "https://gh-proxy.com/github.com/SilentReed/MoviePilot-Plugins/raw/refs/heads/main/icons/serverchan.png",
         "author": "SilentReed",
         "level": 1,
         "history": {
