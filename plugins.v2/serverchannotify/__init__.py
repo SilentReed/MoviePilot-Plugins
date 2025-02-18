@@ -25,6 +25,7 @@ class ServerChanNotify(_PluginBase):
     _server_jiang_sendkey = ""
     _enable_notify_types = []
     _notification_helper: NotificationHelper = None
+    _send_test = False
 
     def init_plugin(self, config: dict = None):
         if hasattr(settings, 'VERSION_FLAG'):
@@ -40,6 +41,7 @@ class ServerChanNotify(_PluginBase):
         if config:
             self._server_jiang_sendkey = config.get("server_jiang_sendkey", "")
             self._enable_notify_types = config.get("enable_notify_types", [])
+            self._send_test = config.get("send_test", False)
 
             # 若 uid 未提供，尝试从 sendkey 中提取
             if not self._server_jiang_uid and self._server_jiang_sendkey:
@@ -47,11 +49,34 @@ class ServerChanNotify(_PluginBase):
                 if match:
                     self._server_jiang_uid = match.group(1)
 
+            if self._send_test:
+                flag = self.send_server_jiang_notification(
+                    title="Server酱³通知插件测试",
+                    desp="这是一条测试消息，用于验证 Server酱³通知插件是否正常工作。"
+                )
+                if flag:
+                    self.systemmessage.put("Server酱³通知插件测试消息发送成功！")
+                else:
+                    self.systemmessage.put("Server酱³通知插件测试消息发送失败，请检查配置。")
+                self._send_test = False
+                self.__update_config()
+
     def setup_v2(self):
         self._notification_helper = NotificationHelper()
 
     def setup_v1(self):
         pass
+
+    def __update_config(self):
+        """
+        更新配置
+        """
+        config = {
+            "server_jiang_sendkey": self._server_jiang_sendkey,
+            "enable_notify_types": self._enable_notify_types,
+            "send_test": self._send_test
+        }
+        self.update_config(config)
 
     def get_state(self) -> bool:
         """
@@ -87,7 +112,8 @@ class ServerChanNotify(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12
+                                    'cols': 12,
+                                    'md': 6
                                 },
                                 'content': [
                                     {
@@ -99,6 +125,24 @@ class ServerChanNotify(_PluginBase):
                                             'rules': [
                                                 lambda value: bool(value) or 'SendKey 不能为空'
                                             ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'send_test',
+                                            'label': '立刻发送测试',
+                                            'hint': '开启后将发送一条测试消息，发送完成后自动关闭',
+                                            'persistent-hint': True
                                         }
                                     }
                                 ]
@@ -136,7 +180,8 @@ class ServerChanNotify(_PluginBase):
 
         config_suggest = {
             "server_jiang_sendkey": "",
-            "enable_notify_types": []
+            "enable_notify_types": [],
+            "send_test": False
         }
 
         return elements, config_suggest
