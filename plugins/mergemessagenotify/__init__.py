@@ -16,7 +16,7 @@ class MergeMessageNotify(_PluginBase):
     # 插件描述
     plugin_desc = "消息通知，一个插件就够了。"
     # 插件图标
-    plugin_icon = "https://github.com/SilentReed/MoviePilot-Plugins/main/icons/MergeMessageNotify_121.png"
+    plugin_icon = "MergeMessageNotify_121.png"
     # 插件版本
     plugin_version = "2.0"
     # 插件作者
@@ -24,7 +24,7 @@ class MergeMessageNotify(_PluginBase):
     # 作者主页
     author_url = "https://github.com/SilentReed"
     # 插件配置项ID前缀
-    plugin_config_prefix = "com.SilentReed.mergemessagenotify."
+    plugin_config_prefix = "SilentReed_"
     # 加载顺序
     plugin_order = 66
     # 可使用的用户级别
