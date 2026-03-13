@@ -2,7 +2,7 @@
   "channel": {
     "serverchan": {
       "enable": false,
-      "name": "Server酱通知",
+      "name": "Server酱³通知",
       "icon": "mdi-bell-ring",
       "type": "notify"
     }
@@ -10,9 +10,9 @@
   "plugins": {
     "serverchan": {
       "enable": false,
-      "name": "Server酱通知",
-      "desc": "通过Server酱发送消息通知",
-      "version": "1.0.0",
+      "name": "Server酱³通知",
+      "desc": "通过Server酱³发送消息通知，支持APP推送",
+      "version": "1.0.1",
       "author": "SilentReed",
       "author_url": "https://github.com/SilentReed",
       "plugin_url": "https://github.com/SilentReed/MoviePilot-ServerChan",
