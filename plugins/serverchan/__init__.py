@@ -5,8 +5,6 @@ import re
 from datetime import datetime
 
 import aiohttp
-from app import schemas
-from app.core.config import settings
 from app.core.event import eventmanager, Event, EventType
 from app.plugins import _PluginBase
 from app.schemas import NotificationType
@@ -17,7 +15,7 @@ class ServerChan(_PluginBase):
     plugin_type = "notify"
     plugin_name = "Server酱³通知"
     plugin_desc = "通过Server酱³发送消息通知，支持APP推送"
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
 
     # 插件配置项
     sendkey: str = ""
@@ -62,77 +60,106 @@ class ServerChan(_PluginBase):
             "version": self.plugin_version,
         }
 
-    def get_schema(self) -> list[schemas.PluginConfigItem]:
+    def get_config_form(self) -> Optional[list]:
+        """
+        V2版本配置表单
+        """
         return [
             {
-                "key": "sendkey",
-                "name": "Server酱³ SendKey",
-                "desc": "在 Server酱³ 官网获取的 SendKey，格式如：sctp123456t...",
-                "type": "string",
-                "required": True,
+                "component": "v-switch",
+                "props": {
+                    "label": "启用插件",
+                    "model": self.enabled,
+                    "key": "enabled",
+                }
             },
             {
-                "key": "enabled",
-                "name": "启用插件",
-                "desc": "是否启用 Server酱³ 通知",
-                "type": "switch",
-                "required": False,
+                "component": "v-text-field",
+                "props": {
+                    "label": "Server酱³ SendKey",
+                    "model": self.sendkey,
+                    "key": "sendkey",
+                    "placeholder": "sctp123456txxxxxxxxxxxxx",
+                    "hint": "在 Server酱³ 官网获取的 SendKey",
+                    "persistent-hint": True,
+                }
             },
             {
-                "key": "notify_download_added",
-                "name": "下载任务添加通知",
-                "desc": "当下载任务添加时发送通知",
-                "type": "switch",
-                "required": False,
+                "component": "v-divider",
+                "props": {
+                    "class": "my-2"
+                }
             },
             {
-                "key": "notify_download_deleted",
-                "name": "下载任务删除通知",
-                "desc": "当下载任务删除时发送通知",
-                "type": "switch",
-                "required": False,
+                "component": "v-subheader",
+                "props": {
+                    "class": "py-0"
+                },
+                "text": "通知事件配置"
             },
             {
-                "key": "notify_transfer_complete",
-                "name": "媒体整理完成通知",
-                "desc": "当媒体文件整理完成时发送通知",
-                "type": "switch",
-                "required": False,
+                "component": "v-switch",
+                "props": {
+                    "label": "下载任务添加通知",
+                    "model": self.notify_download_added,
+                    "key": "notify_download_added",
+                }
             },
             {
-                "key": "notify_subscribe_complete",
-                "name": "订阅完成通知",
-                "desc": "当订阅完成时发送通知",
-                "type": "switch",
-                "required": False,
+                "component": "v-switch",
+                "props": {
+                    "label": "下载任务删除通知",
+                    "model": self.notify_download_deleted,
+                    "key": "notify_download_deleted",
+                }
             },
             {
-                "key": "notify_site_refreshed",
-                "name": "站点刷新通知",
-                "desc": "当站点刷新时发送通知",
-                "type": "switch",
-                "required": False,
+                "component": "v-switch",
+                "props": {
+                    "label": "媒体整理完成通知",
+                    "model": self.notify_transfer_complete,
+                    "key": "notify_transfer_complete",
+                }
             },
             {
-                "key": "notify_system_error",
-                "name": "系统错误通知",
-                "desc": "当发生系统错误时发送通知",
-                "type": "switch",
-                "required": False,
+                "component": "v-switch",
+                "props": {
+                    "label": "订阅完成通知",
+                    "model": self.notify_subscribe_complete,
+                    "key": "notify_subscribe_complete",
+                }
             },
             {
-                "key": "notify_user_message",
-                "name": "用户消息通知",
-                "desc": "当收到用户消息时发送通知",
-                "type": "switch",
-                "required": False,
+                "component": "v-switch",
+                "props": {
+                    "label": "站点刷新通知",
+                    "model": self.notify_site_refreshed,
+                    "key": "notify_site_refreshed",
+                }
             },
             {
-                "key": "notify_notice_message",
-                "name": "综合通知消息",
-                "desc": "接收所有通知消息（总开关）",
-                "type": "switch",
-                "required": False,
+                "component": "v-switch",
+                "props": {
+                    "label": "系统错误通知",
+                    "model": self.notify_system_error,
+                    "key": "notify_system_error",
+                }
+            },
+            {
+                "component": "v-switch",
+                "props": {
+                    "label": "用户消息通知",
+                    "model": self.notify_user_message,
+                    "key": "notify_user_message",
+                }
+            },
+            {
+                "component": "v-switch",
+                "props": {
+                    "label": "综合通知消息",
+                    "model": self.notify_notice_message,
+                    "key": "notify_notice_message",
+                }
             },
         ]
 
@@ -271,7 +298,7 @@ class ServerChan(_PluginBase):
         
         return title, content, notify_type, tags
 
-    # ==================== 事件监听器 ====================
+    # ==================== V2 事件监听器 ====================
 
     @eventmanager.register(EventType.DownloadAdded)
     async def handle_download_added(self, event: Event) -> None:
