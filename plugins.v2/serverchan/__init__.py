@@ -1,7 +1,6 @@
 from typing import Any, List, Dict, Tuple, Optional
 from urllib.parse import parse_qs
 
-import aiohttp
 from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
@@ -17,7 +16,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "https://img.shields.io/badge/Server酱-07C160?style=flat&logo=wechat"
     # 插件版本
-    plugin_version = "1.0.4"
+    plugin_version = "1.0.6"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -26,6 +25,8 @@ class ServerChan(_PluginBase):
     plugin_config_prefix = "serverchan_"
     # 加载顺序
     plugin_order = 27
+    # 可使用的用户级别
+    auth_level = 1
 
     # 私有属性
     _enabled = False
@@ -44,7 +45,7 @@ class ServerChan(_PluginBase):
 
         if self._onlyonce:
             self._onlyonce = False
-            self._send("Server酱³通知测试", "插件已启用")
+            self._send_message("Server酱³通知测试", "插件已启用")
 
     def get_state(self) -> bool:
         return self._enabled and (True if self._uid and self._sendkey else False)
@@ -189,7 +190,7 @@ class ServerChan(_PluginBase):
     def get_page(self) -> List[dict]:
         pass
 
-    def _send(self, title: str, text: str, msg_type: NotificationType = NotificationType.Info) -> Optional[Tuple[bool, str]]:
+    def _send_message(self, title: str, text: str) -> Optional[Tuple[bool, str]]:
         """
         发送消息
         """
@@ -199,17 +200,8 @@ class ServerChan(_PluginBase):
 
             url = f"https://{self._uid}.push.ft07.com/send/{self._sendkey}.send"
             
-            # 根据通知类型添加不同的前缀
-            type_emoji = {
-                NotificationType.Info: "ℹ️",
-                NotificationType.Warning: "⚠️",
-                NotificationType.Error: "❌",
-                NotificationType.Success: "✅",
-            }
-            prefix = type_emoji.get(msg_type, "")
-            
             data = {
-                "title": f"{prefix} {title}",
+                "title": title,
                 "desp": f"{title}\n\n{text}",
             }
 
@@ -263,7 +255,7 @@ class ServerChan(_PluginBase):
             logger.info(f"消息类型 {msg_type.value} 未开启消息发送")
             return
 
-        return self._send(title, text, msg_type)
+        return self._send_message(title, text)
 
     def stop_service(self):
         """
