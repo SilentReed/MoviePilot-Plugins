@@ -3,18 +3,15 @@
     "name": "Server酱³通知",
     "description": "通过Server酱³发送消息通知，支持APP推送",
     "labels": "通知,Server酱",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "icon": "https://img.shields.io/badge/Server酱-07C160?style=flat&logo=wechat",
     "author": "SilentReed",
     "level": 1,
     "v2": true,
     "history": {
+      "v1.0.7": "修复消息类型过滤逻辑，增加日志输出",
       "v1.0.6": "修复NotificationType属性错误",
-      "v1.0.5": "适配V2插件规范，使用get_form方法",
-      "v1.0.4": "增加UID手动配置项",
-      "v1.0.3": "适配MoviePilot V2版本",
-      "v1.0.2": "修正API为Server酱³正确接口",
-      "v1.0.1": "初始版本"
+      "v1.0.5": "适配V2插件规范，使用get_form方法"
     }
   }
 }

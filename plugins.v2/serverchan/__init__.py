@@ -16,7 +16,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "https://img.shields.io/badge/Server酱-07C160?style=flat&logo=wechat"
     # 插件版本
-    plugin_version = "1.0.6"
+    plugin_version = "1.0.7"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -48,7 +48,11 @@ class ServerChan(_PluginBase):
             self._send_message("Server酱³通知测试", "插件已启用")
 
     def get_state(self) -> bool:
-        return self._enabled and (True if self._uid and self._sendkey else False)
+        if not self._enabled:
+            return False
+        if not self._uid or not self._sendkey:
+            return False
+        return True
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -169,7 +173,7 @@ class ServerChan(_PluginBase):
                                             'multiple': True,
                                             'chips': True,
                                             'model': 'msgtypes',
-                                            'label': '消息类型',
+                                            'label': '消息类型（不选则接收所有）',
                                             'items': MsgTypeOptions
                                         }
                                     }
@@ -196,6 +200,7 @@ class ServerChan(_PluginBase):
         """
         try:
             if not self._uid or not self._sendkey:
+                logger.error("Server酱³ UID 或 SendKey 未配置")
                 return False, "参数未配置"
 
             url = f"https://{self._uid}.push.ft07.com/send/{self._sendkey}.send"
@@ -205,6 +210,7 @@ class ServerChan(_PluginBase):
                 "desp": f"{title}\n\n{text}",
             }
 
+            logger.info(f"Server酱³ 发送消息: {title}")
             res = RequestUtils().post_res(url, data=data)
             if res and res.status_code == 200:
                 result = res.json()
@@ -216,8 +222,11 @@ class ServerChan(_PluginBase):
                     logger.warn(f"Server酱³消息发送失败: {error_msg}")
                     return False, error_msg
             else:
-                logger.warn(f"Server酱³消息发送失败，状态码: {res.status_code if res else 'None'}")
-                return False, "请求失败"
+                status = res.status_code if res else "None"
+                logger.warn(f"Server酱³消息发送失败，状态码: {status}")
+                if res is not None:
+                    logger.warn(f"响应内容: {res.text[:200]}")
+                return False, f"请求失败，状态码: {status}"
                 
         except Exception as e:
             logger.error(f"Server酱³消息发送异常: {str(e)}")
@@ -229,32 +238,38 @@ class ServerChan(_PluginBase):
         消息发送事件
         """
         if not self.get_state():
+            logger.debug("Server酱³ 插件未启用或参数未配置")
             return
 
         if not event.event_data:
+            logger.debug("Server酱³ 事件数据为空")
             return
 
         msg_body = event.event_data
-        # 渠道
-        channel = msg_body.get("channel")
-        if channel:
-            return
-        # 类型
-        msg_type: NotificationType = msg_body.get("type")
+        
         # 标题
         title = msg_body.get("title")
         # 文本
         text = msg_body.get("text")
 
         if not title and not text:
-            logger.warn("标题和内容不能同时为空")
+            logger.warn("Server酱³ 标题和内容不能同时为空")
             return
 
-        if (msg_type and self._msgtypes
-                and msg_type.name not in self._msgtypes):
-            logger.info(f"消息类型 {msg_type.value} 未开启消息发送")
-            return
+        # 消息类型过滤
+        msg_type = msg_body.get("type")
+        if msg_type and self._msgtypes:
+            # 如果配置了消息类型，则只发送选中的类型
+            if isinstance(msg_type, NotificationType):
+                if msg_type.name not in self._msgtypes:
+                    logger.debug(f"Server酱³ 消息类型 {msg_type.value} 未开启，跳过")
+                    return
+            elif isinstance(msg_type, str):
+                if msg_type not in self._msgtypes:
+                    logger.debug(f"Server酱³ 消息类型 {msg_type} 未开启，跳过")
+                    return
 
+        logger.info(f"Server酱³ 收到消息: {title}")
         return self._send_message(title, text)
 
     def stop_service(self):
