@@ -1,7 +1,6 @@
 from typing import Any, Optional
 import asyncio
 import json
-import re
 from datetime import datetime
 
 import aiohttp
@@ -15,10 +14,11 @@ class ServerChan(_PluginBase):
     plugin_type = "notify"
     plugin_name = "Server酱³通知"
     plugin_desc = "通过Server酱³发送消息通知，支持APP推送"
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
 
     # 插件配置项
     sendkey: str = ""
+    uid: str = ""
     enabled: bool = False
     
     # 事件开关配置
@@ -34,23 +34,12 @@ class ServerChan(_PluginBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._aio_session: Optional[aiohttp.ClientSession] = None
-        self._uid: Optional[str] = None
 
     @property
     def aio_session(self) -> aiohttp.ClientSession:
         if self._aio_session is None or self._aio_session.closed:
             self._aio_session = aiohttp.ClientSession()
         return self._aio_session
-    
-    def _parse_uid(self) -> Optional[str]:
-        """从 sendkey 中提取 uid"""
-        if not self.sendkey:
-            return None
-        # sendkey 格式: sctp{uid}t...
-        match = re.match(r'^sctp(\d+)t', self.sendkey)
-        if match:
-            return match.group(1)
-        return None
 
     def get_plugin_desc(self) -> dict:
         return {
@@ -71,6 +60,17 @@ class ServerChan(_PluginBase):
                     "label": "启用插件",
                     "model": self.enabled,
                     "key": "enabled",
+                }
+            },
+            {
+                "component": "v-text-field",
+                "props": {
+                    "label": "UID",
+                    "model": self.uid,
+                    "key": "uid",
+                    "placeholder": "123456",
+                    "hint": "Server酱³ 用户ID",
+                    "persistent-hint": True,
                 }
             },
             {
@@ -173,15 +173,13 @@ class ServerChan(_PluginBase):
         if not self.sendkey:
             self.systemmessage("Server酱³ SendKey 未配置")
             return False
-
-        # 提取 uid
-        uid = self._parse_uid()
-        if not uid:
-            self.systemmessage("SendKey 格式错误，应为 sctp{uid}t 格式")
+            
+        if not self.uid:
+            self.systemmessage("Server酱³ UID 未配置")
             return False
 
         try:
-            url = f"https://{uid}.push.ft07.com/send/{self.sendkey}.send"
+            url = f"https://{self.uid}.push.ft07.com/send/{self.sendkey}.send"
             
             # 根据通知类型添加不同的前缀
             type_emoji = {

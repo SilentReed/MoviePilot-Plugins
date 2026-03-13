@@ -12,7 +12,7 @@
       "enable": false,
       "name": "Server酱³通知",
       "desc": "通过Server酱³发送消息通知，支持APP推送，适配V2版本",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "author": "SilentReed",
       "author_url": "https://github.com/SilentReed",
       "plugin_url": "https://github.com/SilentReed/MoviePilot-ServerChan",
