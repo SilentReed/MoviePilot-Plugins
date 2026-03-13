@@ -14,9 +14,9 @@ class ServerChan(_PluginBase):
     # 插件描述
     plugin_desc = "通过Server酱³发送消息通知，支持APP推送"
     # 插件图标
-    plugin_icon = "https://img.shields.io/badge/Server酱-07C160?style=flat&logo=wechat"
+    plugin_icon = "https://sc3.ft07.com/favicon.png"
     # 插件版本
-    plugin_version = "1.0.7"
+    plugin_version = "1.0.8"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
