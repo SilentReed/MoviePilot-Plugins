@@ -16,7 +16,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "v1.6.0"
+    plugin_version = "v1.7.0"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -50,8 +50,12 @@ class ServerChan(_PluginBase):
             self._msgtypes = config.get("msgtypes") or []
 
         if self._onlyonce:
-            self._onlyonce = False
+            # 发送测试消息
             self._send_message("Server酱³通知测试", "插件已启用")
+            # 关闭一次性开关
+            self._onlyonce = False
+            # 保存配置
+            self.__update_config()
 
     def get_state(self) -> bool:
         if not self._enabled:
@@ -339,6 +343,20 @@ class ServerChan(_PluginBase):
                 return False
         
         return True
+
+    def __update_config(self):
+        """
+        保存插件配置
+        """
+        self.update_config(
+            {
+                "enabled": self._enabled,
+                "onlyonce": self._onlyonce,
+                "uid": self._uid,
+                "sendkey": self._sendkey,
+                "msgtypes": self._msgtypes,
+            }
+        )
 
     def stop_service(self):
         """
