@@ -37,7 +37,7 @@ from app.plugins import _PluginBase
 class UgnasCredits(_PluginBase):
     """绿联论坛积分查询插件（增强版）"""
 
-    plugin_name: str = "绿联论坛积分助手"
+    plugin_name: str = "绿联论坛积分查询"
     plugin_desc: str = "每日定时查询绿联论坛积分变化并推送通知，支持自动登录"
     plugin_icon: str = "https://raw.githubusercontent.com/SilentReed/MoviePilot-Plugins-UgnasCredits/main/plugins.v2/ugnascredits/icons/ugnascredits.svg"
     plugin_version: str = "2.0.1"
@@ -54,7 +54,11 @@ class UgnasCredits(_PluginBase):
 
     def init_plugin(self, config: Optional[Dict[str, Any]] = None) -> None:
         """插件初始化"""
-        # 初始化默认值（必须在 stop_service 之前）
+        self.stop_service()
+
+        self._data_file: Path = Path(settings.ROOT_PATH) / "plugins" / "data" / "ugnascredits" / "credits.json"
+
+        # 默认值
         self._enabled = False
         self._onlyonce = False
         self._cron = "0 8 * * *"
@@ -68,10 +72,6 @@ class UgnasCredits(_PluginBase):
         self._timeout = 30
         self._history_days = 30
         self._scheduler: Optional[BackgroundScheduler] = None
-
-        self.stop_service()
-
-        self._data_file: Path = Path(settings.ROOT_PATH) / "plugins" / "data" / "ugnascredits" / "credits.json"
         self._last_run_time: str = ""
         self._last_run_status: bool = False
         self._last_run_message: str = "" 
@@ -362,7 +362,469 @@ class UgnasCredits(_PluginBase):
                     access_token = tok['data'].get('access_token')
                     if not access_token and isinstance(tok['data'].get('accessToken'), dict):
                         access_token = tok['data']['accessToken'].get('access_token')
-                if notQ3�M4T4 =w۝܅��h���h���}���-jR�bC#��W6W&��R�C"�w&�W���7G&�����bW6W&��R��"�#��C2�&R�6V&6��"&6�73��&����U�#ⅵ��Ҳ���7��"��F���bC3��W6W&��R�C2�w&�W���7G&����W�6WBW�6WF��㠢70��2h�X�nzz�X�`�G'����&R�6V&6��"v6�73�&�֦�fV��֖6��#��7���B����7��zz�X�br��F���b�����G2���B��w&�W����V�6S��"�&R�6V&6��"~zz�X�e��ɣ���2���B��r��F���b#�����G2���B�"�w&�W�����b���G2�2���S��2�&R�6V&6��"v6�73�'�s%���ң�zz�X�c���B�����r��F���b3�����G2���B�2�w&�W����W�6WBW�6WF��㠢70��2h�X�nyJ�h�~{�@�G'���Vr�&R�6V&6��"s�Ɠ��V��yJ�h�~{�C��V��������ңⅵ��Ҳ����r��F���bVs��W6W&w&�W�Vr�w&�W���7G&����W�6WBW�6WF��㠢70��2h�X�nK���)�i[ �G'���F��&R�6V&6��"s�7���B����7��K���)�i[r��F���bF���F�&VG2���B�F��w&�W����W�6WBW�6WF��㠢70��2h�X�nY��[�ni[ �G'�����&R�6V&6��"s�7���B����7��Y��[�ni[r��F���b��7G2���B���w&�W����W�6WBW�6WF��㠢70��2h�X�nZ[�X��i[ �G'���g"�&R�6V&6��"s�7���B����7��Z[�X��i[r��F���bg#��g&�V�G2���B�g"�w&�W����W�6WBW�6WF��㠢70��2h�X�nZKNX8�G'���fF%��F6��&R�6V&6��"sƖ�u���Ҧ6�73�'W6W%�fF"%���ң�r��F���bfF%��F6�����u�Fr�fF%��F6��w&�W���7&5��F6��&R�6V&6��"w7&3�"���%Ҳ�"r���u�Fr���b7&5��F6���fF%�W&��7&5��F6��w&�W����br�fF"�r��fF%�W&��BfF%�W&��7F'G7v�F��v�GGr���fF"�fF%�W&��V�6S��fF"�fF%�W&���b��BfF#��fF"�&�GG3���&'2�6���72�Vv�2�6���&'2�fF"���fF"��r �W�6WBW�6WF��㠢fF"�&�GG3���&'2�6���72�Vv�2�6���&'2�fF"���fF"��r ����f����'V�B#�V�B�"6V�b��V�B��'W6W&��R#�W6W&��R��'���G2#����G2�"��&fF"#�fF"��'W6W&w&�W#�W6W&w&�W��'F�&VG2#�F�&VG2��'�7G2#��7G2��&g&�V�G2#�g&�V�G0�Р�6V�b�6fU�FF�v�7E�W6W%���f�r���f�&WGW&���f�FVb���E�FF�6V�b���F�7E�7G"��Ӡ�"".X����zz�X�nX�nX�.i[h��"" ��b6V�b��FF�f��R�B6V�b��FF�f��R�W��7G2����G'���v�F��V�6V�b��FF�f��R�'""�V�6�F��s�'WFbӂ"�2c��&WGW&��6�����B�b��W�6WBW�6WF���2S����vvW"�W'&�"�b.X����zz�X�ni[h��ZK�JS��W�"��&WGW&��'W6W&��R#�6V�b��W6W&��R�'V�B#�6V�b��V�B�'&V6�&G2#����'7FG2#����'W6W%���f�#���Р�FVb�6fU�FF�6V�b�FF�F�7E�7G"��Ғ�����S��"".K��Zَzz�X�nX�nX�.i[h��"" �G'����b6V�b��FF�f��S��6V�b��FF�f��R�&V�B�ֶF�"�&V�G3�G'VR�W��7E����G'VR��v�F��V�6V�b��FF�f��R�'r"�V�6�F��s�'WFbӂ"�2c���6���GV��FF�b���FV�C�"�V�7W&U�66���f�6R��W�6WBW�6WF���2S����vvW"�W'&�"�b.K��Zَzz�X�ni[h��ZK�JS��W�"���FVb�6�7V�FU�7FG2�6V�b�&V6�&G3�Ɨ7E�F�7E�7G"���Ғ��F�7E�7G"��Ӡ�"".��z�~zz�X�n{����"" ��b��B&V6�&G3��&WGW&��Р�7&VF�G5�Ɨ7B��"�vWB�&7&VF�G2"��f�""��&V6�&G5Т6��vU�Ɨ7B��"�vWB�&6��vR"��f�""��&V6�&G5Р�fƖE�7&VF�G2��2f�"2��7&VF�G5�Ɨ7B�b2�ТF�F��6��vR�7V҆6��vU�Ɨ7B���6�F�fU�F�2�7V҃f�"2��6��vU�Ɨ7B�b2����VvF�fU�F�2�7V҃f�"2��6��vU�Ɨ7B�b2����&WGW&���'F�F��&V6�&G2#��V�&V6�&G2���&���7&VF�G2#����fƖE�7&VF�G2��bfƖE�7&VF�G2V�6R��&֖��7&VF�G2#�֖�fƖE�7&VF�G2��bfƖE�7&VF�G2V�6R��&fu�7&VF�G2#�7V҇fƖE�7&VF�G2����V�fƖE�7&VF�G2��bfƖE�7&VF�G2V�6R��'F�F��6��vR#�F�F��6��vR��'�6�F�fU�F�2#��6�F�fU�F�2��&�VvF�fU�F�2#��VvF�fU�F�2��&7W'&V�E�7G&V�#�6V�b��6�7V�FU�7G&V��&V6�&G2���Р�FVb�6�7V�FU�7G&V��6V�b�&V6�&G3�Ɨ7E�F�7E�7G"���Ғ����C��"".��z�~���{��Z)�[�ZJ�i["" �7G&V�� �f�"&V6�&B��&WfW'6VB�&V6�&G2����b&V6�&B�vWB�&6��vR"�����7G&V����V�6S��'&V��&WGW&�7G&V���FVb�vV�W&FU�&W�'B��6V�b����f�F�7E�7G"�����7&VF�G5���s���B��6��vU�g&����7C���B��F�F��7G"��7FG3�F�7E�7G"��Т���7G#��"".yI�h�zz�X�nh�^Y�"" �6��vU�6�v��"�"�b6��vU�g&����7B��V�6R" ���R���f��vWB�wW6W&��Rr�6V�b��W6W&��R��V�B���f��vWB�wV�Br�6V�b��V�B��W6W&w&�W���f��vWB�wW6W&w&�Wr�rr���&W�'E�Ɩ�W2���b/	�8�{���N��Yپzz�X�niz^h�R"��b/	�ByJ�h�~�ɧ���W��T�C��V�GҒ"��Т�bW6W&w&�W��&W�'E�Ɩ�W2�V�B�b/	�RyJ�h�~{�N�ɧ�W6W&w&�W�"��&W�'E�Ɩ�W2�W�FV�B���b/	�8Riz^i���ɧ�F�F��"��b/	�+[�>X��zz�X�n�ɧ�7&VF�G5���w�"��b/	�8���>K��j��ɧ�6��vU�6�v�׶6��vU�g&����7G�"��Ґ���b7FG3���b7FG2�vWB�&7W'&V�E�7G&V�"�����&W�'E�Ɩ�W2�V�B�b/	�JR���{��Z)�[��ɧ�7FG5�v7W'&V�E�7G&V�u��ZJ�"���b7FG2�vWB�'�6�F�fU�F�2"���7FG2�vWB�&�VvF�fU�F�2"����&W�'E�Ɩ�W2�V�B�b/	�8�h�K�>�h�X���ɮK��kj���7FG5�w�6�F�fU�F�2u����7FG5�w�6�F�fU�F�2u��7FG5�v�VvF�fU�F�2u�Ғ"��VƖb7FG2�vWB�&�VvF�fU�F�2"���7FG2�vWB�'�6�F�fU�F�2"����&W�'E�Ɩ�W2�V�B�b/	�8�h�K�>�h�X���ɮK�����"���&WGW&�%��"����&W�'E�Ɩ�W2���FVbvWE�7FFR�6V�b���&��à�"".��~X�nh�.K�nx�nh"" ��b��B6V�b��V�&�VC��&WGW&�f�6P��b��B6V�b��6����R�B��B�6V�b��W6W&��R�B6V�b��77v�&B���&WGW&�f�6P�&WGW&�G'VP��7FF�6�WF��@�FVbvWE�6����B����Ɨ7C��&WGW&��Р�FVbvWE���6V�b���Ɨ7E�F�7E�7G"���Ӡ�&WGW&�����'F�#�"�&Vg&W6�"��&V�G���B#�6V�b����&Vg&W6���&�WF��G2#��%�5B%���'7V��'�#�.h��X��X�~ikzz�X�b"��&FW67&�F���#�.z��X�>h�~��K�j�zz�X�ni�^��" ������'F�#�"�7FG2"��&V�G���B#�6V�b����7FG2��&�WF��G2#��$tUB%���'7V��'�#�.��~X�n{����"��&FW67&�F���#�.��~X�nzz�X�n{����i[h�� �ТР�7��2FVb���&Vg&W6��6V�b���F�7E�7G"��Ӡ�""$��h��X��X�~ikzz�X�b"" �7V66W72��W76vR�v�B6V�b��F��F6��7��2���&WGW&��'7Vessage}
+                if not access_token:
+                    logger.warning("OAuth API 未返回有效令牌")
+                    return False
+
+                # 4. 授权回调
+                state = uuid.uuid4().hex[:12]
+                authorize_url = (
+                    f'{self.API_BASE}/api/oauth/authorize?response_type=code&client_id=discuz-client&scope=user_info'
+                    f'&state={state}&redirect_uri={quote("https://club.ugnas.com/api/ugreen/callback.php")}&access_token={access_token}'
+                )
+
+                async with session.get(
+                    authorize_url,
+                    headers=headers_json,
+                    allow_redirects=False,
+                    timeout=aiohttp.ClientTimeout(total=self.REQUEST_TIMEOUT)
+                ) as r3:
+                    loc = r3.headers.get('location') or r3.headers.get('Location')
+
+                if not loc:
+                    logger.warning("OAuth API 未获取回调地址")
+                    return False
+
+                # 5. 访问回调地址设置Cookie
+                callback_headers = {
+                    'User-Agent': headers_json['User-Agent'],
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'zh-CN'
+                }
+                async with session.get(loc, headers=callback_headers, timeout=aiohttp.ClientTimeout(total=self.REQUEST_TIMEOUT)) as r4:
+                    pass
+
+                # 刷新站点首页
+                async with session.get(
+                    f'{self.BASE_URL}/',
+                    headers=callback_headers,
+                    timeout=aiohttp.ClientTimeout(total=self.REQUEST_TIMEOUT)
+                ) as r5:
+                    pass
+
+                # 汇总Cookie
+                cookie_items = []
+                for c in session.cookie_jar:
+                    cookie_items.append(f"{c.name}={c.value}")
+
+                if cookie_items:
+                    ck = '; '.join(cookie_items)
+                    if '6LQh_2132_BBRules_ok=' not in ck:
+                        ck += '; 6LQh_2132_BBRules_ok=1'
+                    self._cookie = ck
+                    self._save_config()
+                    has_auth = ('6LQh_2132_auth=' in ck)
+                    return has_auth
+
+            return False
+        except Exception as e:
+            logger.warning(f"OAuth API 登录异常: {e}")
+            return False
+
+    async def _playwright_login(self) -> bool:
+        """Playwright 浏览器登录"""
+        try:
+            from playwright.async_api import async_playwright
+
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(headless=True)
+                ctx = await browser.new_context()
+                page = await ctx.new_page()
+
+                await page.goto(f"{self.BASE_URL}/", wait_until="domcontentloaded")
+
+                # 点击同意按钮
+                try:
+                    btn = page.locator("button:has-text('同意')")
+                    if await btn.count() > 0:
+                        await btn.first.click()
+                        await page.wait_for_load_state("networkidle", timeout=8000)
+                except Exception:
+                    pass
+
+                # 设置BBRules cookie
+                try:
+                    await ctx.add_cookies([{
+                        "name": "6LQh_2132_BBRules_ok",
+                        "value": "1",
+                        "domain": "club.ugnas.com",
+                        "path": "/",
+                        "secure": True,
+                        "httpOnly": False,
+                        "expires": int(time.time()) + 31536000
+                    }])
+                except Exception:
+                    pass
+
+                # 访问登录页
+                await page.goto(f"{self.BASE_URL}/member.php?mod=logging&action=login", wait_until="domcontentloaded")
+
+                # 填写用户名密码
+                u_sels = ["input[name='username']", "input[id='username']", "input[type='text']"]
+                p_sels = ["input[name='password']", "input[id='password']", "input[type='password']"]
+
+                for s in u_sels:
+                    if await page.query_selector(s):
+                        await page.fill(s, self._username)
+                        break
+
+                for s in p_sels:
+                    if await page.query_selector(s):
+                        await page.fill(s, self._password)
+                        break
+
+                # 点击登录
+                btn = await page.query_selector("button[type='submit']") or await page.query_selector("input[type='submit']")
+                if btn:
+                    await btn.click()
+                else:
+                    await page.keyboard.press("Enter")
+
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=12000)
+                except Exception:
+                    pass
+
+                # 刷新首页
+                try:
+                    await page.goto(f"{self.BASE_URL}/", wait_until="domcontentloaded")
+                    await page.wait_for_load_state("networkidle", timeout=8000)
+                except Exception:
+                    pass
+
+                # 获取Cookie
+                cookies = await ctx.cookies()
+                parts = []
+                for c in cookies:
+                    n, v = c.get('name'), c.get('value')
+                    if n and v:
+                        parts.append(f"{n}={v}")
+
+                await ctx.close()
+                await browser.close()
+
+                if parts:
+                    self._cookie = "; ".join(parts)
+                    if '6LQh_2132_BBRules_ok=' not in self._cookie:
+                        self._cookie += "; 6LQh_2132_BBRules_ok=1"
+                    has_auth = any('6LQh_2132_auth=' in p for p in parts)
+                    if has_auth:
+                        self._save_config()
+                        return True
+
+            return False
+        except Exception as e:
+            logger.warning(f"Playwright 登录异常: {e}")
+            return False
+
+    async def _fetch_user_profile(self) -> Optional[Dict[str, Any]]:
+        """获取用户资料和积分"""
+        if not self._cookie:
+            return None
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Cookie': self._cookie
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                # 尝试获取UID
+                uid = self._uid
+                if not uid:
+                    uid = await self._discover_uid(session, headers)
+
+                if uid:
+                    url = f'{self.BASE_URL}/home.php?mod=space&uid={uid}'
+                else:
+                    url = f'{self.BASE_URL}/forum.php?mod=forumdisplay&fid=0'
+
+                async with session.get(
+                    url,
+                    headers=headers,
+                    ssl=False,
+                    timeout=aiohttp.ClientTimeout(total=self._timeout)
+                ) as resp:
+                    if resp.status != 200:
+                        return None
+                    html = await resp.text()
+
+                # 解析用户信息
+                info = self._parse_user_info(html, uid)
+                if info:
+                    self.save_data('last_user_info', info)
+                return info
+
+        except Exception as e:
+            logger.error(f"获取用户资料失败: {e}")
+            return None
+
+    async def _discover_uid(self, session, headers) -> Optional[str]:
+        """发现用户UID"""
+        urls = [
+            f'{self.BASE_URL}/forum.php?mod=forumdisplay&fid=0',
+            f'{self.BASE_URL}/home.php',
+        ]
+        for u in urls:
+            try:
+                async with session.get(
+                    u,
+                    headers=headers,
+                    ssl=False,
+                    timeout=aiohttp.ClientTimeout(total=self._timeout)
+                ) as resp:
+                    html = await resp.text()
+
+                # 尝试多种方式提取UID
+                patterns = [
+                    r'id="comiis_user"[\s\S]*?href="home\.php\?mod=space(?:&|&amp;)uid=(\d+)"',
+                    r'discuz_uid\s*=\s*\'?(\d+)\'?',
+                    r'home\.php\?mod=space(?:&|&amp;)uid=(\d+)',
+                ]
+
+                for pattern in patterns:
+                    match = re.search(pattern, html)
+                    if match and match.group(1) != '0':
+                        return match.group(1)
+            except Exception:
+                continue
+
+        return None
+
+    def _parse_user_info(self, html: str, uid: Optional[str]) -> Optional[Dict[str, Any]]:
+        """解析HTML获取用户信息"""
+        if not html:
+            return None
+
+        username = self._username or "-"
+        points = None
+        avatar = None
+        usergroup = None
+        threads = 0
+        posts = 0
+        friends = 0
+
+        # 提取用户名
+        try:
+            t = re.search(r"<li><em>用户名</em>([^<]+)</li>", html)
+            if t:
+                username = t.group(1).strip()
+            else:
+                t2 = re.search(r"<h2 class=\"mbn\">基本资料</h2>[\s\S]*?<li><em>用户名</em>([^<]+)</li>", html)
+                if t2:
+                    username = t2.group(1).strip()
+            if username == "-":
+                t3 = re.search(r"class=\"kmname\">([^<]+)</span>", html)
+                if t3:
+                    username = t3.group(1).strip()
+        except Exception:
+            pass
+
+        # 提取积分
+        try:
+            p = re.search(r'class="kmjifen kmico09"><span>(\d+)</span>积分', html)
+            if p:
+                points = int(p.group(1))
+            else:
+                p2 = re.search(r'积分[：:]\s*(\d+)', html)
+                if p2:
+                    points = int(p2.group(1))
+            if points is None:
+                p3 = re.search(r'class="xg1"[^>]*>积分: (\d+)</a>', html)
+                if p3:
+                    points = int(p3.group(1))
+        except Exception:
+            pass
+
+        # 提取用户组
+        try:
+            ug = re.search(r'<li><em>用户组</em>.*?<a[^>]*>([^<]+)</a>', html)
+            if ug:
+                usergroup = ug.group(1).strip()
+        except Exception:
+            pass
+
+        # 提取主题数
+        try:
+            th = re.search(r'<span>(\d+)</span>主题数', html)
+            if th:
+                threads = int(th.group(1))
+        except Exception:
+            pass
+
+        # 提取回帖数
+        try:
+            po = re.search(r'<span>(\d+)</span>回帖数', html)
+            if po:
+                posts = int(po.group(1))
+        except Exception:
+            pass
+
+        # 提取好友数
+        try:
+            fr = re.search(r'<span>(\d+)</span>好友数', html)
+            if fr:
+                friends = int(fr.group(1))
+        except Exception:
+            pass
+
+        # 提取头像
+        try:
+            avatar_match = re.search(r'<img[^>]*class="user_avatar"[^>]*>', html)
+            if avatar_match:
+                img_tag = avatar_match.group(0)
+                src_match = re.search(r'src="([^"]+)"', img_tag)
+                if src_match:
+                    avatar_url = src_match.group(1)
+                    if '/avatar/' in avatar_url and avatar_url.startswith('http'):
+                        avatar = avatar_url
+                    else:
+                        avatar = avatar_url
+            if not avatar:
+                avatar = "https://bbs-cn-oss.ugnas.com/bbs/avatar/noavatar.png"
+        except Exception:
+            avatar = "https://bbs-cn-oss.ugnas.com/bbs/avatar/noavatar.png"
+
+        info = {
+            "uid": uid or self._uid,
+            "username": username,
+            "points": points or 0,
+            "avatar": avatar,
+            "usergroup": usergroup,
+            "threads": threads,
+            "posts": posts,
+            "friends": friends
+        }
+
+        self.save_data('last_user_info', info)
+        return info
+
+    def _load_data(self) -> Dict[str, Any]:
+        """加载积分历史数据"""
+        if self._data_file and self._data_file.exists():
+            try:
+                with open(self._data_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"加载积分数据失败: {e}")
+        return {"username": self._username, "uid": self._uid, "records": [], "stats": {}, "user_info": {}}
+
+    def _save_data(self, data: Dict[str, Any]) -> None:
+        """保存积分历史数据"""
+        try:
+            if self._data_file:
+                self._data_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(self._data_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"保存积分数据失败: {e}")
+
+    def _calculate_stats(self, records: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """计算积分统计"""
+        if not records:
+            return {}
+
+        credits_list = [r.get("credits", 0) for r in records]
+        change_list = [r.get("change", 0) for r in records]
+
+        valid_credits = [c for c in credits_list if c > 0]
+        total_change = sum(change_list)
+        positive_days = sum(1 for c in change_list if c > 0)
+        negative_days = sum(1 for c in change_list if c < 0)
+
+        return {
+            "total_records": len(records),
+            "max_credits": max(valid_credits) if valid_credits else 0,
+            "min_credits": min(valid_credits) if valid_credits else 0,
+            "avg_credits": sum(valid_credits) // len(valid_credits) if valid_credits else 0,
+            "total_change": total_change,
+            "positive_days": positive_days,
+            "negative_days": negative_days,
+            "current_streak": self._calculate_streak(records),
+        }
+
+    def _calculate_streak(self, records: List[Dict[str, Any]]) -> int:
+        """计算连续增长天数"""
+        streak = 0
+        for record in reversed(records):
+            if record.get("change", 0) > 0:
+                streak += 1
+            else:
+                break
+        return streak
+
+    def _generate_report(
+        self,
+        info: Dict[str, Any],
+        credits_now: int,
+        change_from_last: int,
+        today: str,
+        stats: Dict[str, Any]
+    ) -> str:
+        """生成积分报告"""
+        change_sign = "+" if change_from_last >= 0 else ""
+        name = info.get('username', self._username)
+        uid = info.get('uid', self._uid)
+        usergroup = info.get('usergroup', '')
+
+        report_lines = [
+            f"📊 绿联论坛积分日报",
+            f"👤 用户：{name} (UID: {uid})",
+        ]
+        if usergroup:
+            report_lines.append(f"👥 用户组：{usergroup}")
+        report_lines.extend([
+            f"📅 日期：{today}",
+            f"💰 当前积分：{credits_now}",
+            f"📈 较上次：{change_sign}{change_from_last}",
+        ])
+
+        if stats:
+            if stats.get("current_streak", 0) > 0:
+                report_lines.append(f"🔥 连续增长：{stats['current_streak']} 天")
+            if stats.get("positive_days", 0) > stats.get("negative_days", 0):
+                report_lines.append(f"📈 总体趋势：上涨 ({stats['positive_days']}/{stats['positive_days'] + stats['negative_days']})")
+            elif stats.get("negative_days", 0) > stats.get("positive_days", 0):
+                report_lines.append(f"📉 总体趋势：下降")
+
+        return "\n".join(report_lines)
+
+    def get_state(self) -> bool:
+        """获取插件状态"""
+        if not self._enabled:
+            return False
+        if not self._cookie and not (self._username and self._password):
+            return False
+        return True
+
+    @staticmethod
+    def get_command() -> List:
+        return []
+
+    def get_api(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "path": "/refresh",
+                "endpoint": self._api_refresh,
+                "methods": ["POST"],
+                "summary": "手动刷新积分",
+                "description": "立即执行一次积分查询"
+            },
+            {
+                "path": "/stats",
+                "endpoint": self._api_stats,
+                "methods": ["GET"],
+                "summary": "获取统计",
+                "description": "获取积分统计数据"
+            }
+        ]
+
+    async def _api_refresh(self) -> Dict[str, Any]:
+        """API: 手动刷新积分"""
+        success, message = await self._do_task_async()
+        return {"success": success, "message": message}
 
     def _api_stats(self) -> Dict[str, Any]:
         """API: 获取统计"""
