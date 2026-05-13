@@ -39,7 +39,7 @@ class UgnasCredits(_PluginBase):
 
     plugin_name: str = "绿联论坛积分查询"
     plugin_desc: str = "每日定时查询绿联论坛积分变化并推送通知，支持自动登录"
-    plugin_icon: str = "https://raw.githubusercontent.com/SilentReed/MoviePilot-Plugins-UgnasCredits/main/plugins.v2/ugnascredits/icons/ugnascredits.svg"
+    plugin_icon: str = "icons/ugnascredits.svg"
     plugin_version: str = "2.0.1"
     plugin_author: str = "SilentReed"
     author_url: str = "https://github.com/SilentReed"
