@@ -37,7 +37,7 @@ from app.plugins import _PluginBase
 class UgnasCredits(_PluginBase):
     """绿联论坛积分查询插件（增强版）"""
 
-    plugin_name: str = "绿联论坛积分查询"
+    plugin_name: str = "绿联论坛积分助手"
     plugin_desc: str = "每日定时查询绿联论坛积分变化并推送通知，支持自动登录"
     plugin_icon: str = "https://raw.githubusercontent.com/SilentReed/MoviePilot-Plugins-UgnasCredits/main/plugins.v2/ugnascredits/icons/ugnascredits.svg"
     plugin_version: str = "2.0.0"
