@@ -54,11 +54,7 @@ class UgnasCredits(_PluginBase):
 
     def init_plugin(self, config: Optional[Dict[str, Any]] = None) -> None:
         """插件初始化"""
-        self.stop_service()
-
-        self._data_file: Path = Path(settings.ROOT_PATH) / "plugins" / "data" / "ugnascredits" / "credits.json"
-
-        # 默认值
+        # 初始化默认值（必须在 stop_service 之前）
         self._enabled = False
         self._onlyonce = False
         self._cron = "0 8 * * *"
@@ -72,6 +68,10 @@ class UgnasCredits(_PluginBase):
         self._timeout = 30
         self._history_days = 30
         self._scheduler: Optional[BackgroundScheduler] = None
+
+        self.stop_service()
+
+        self._data_file: Path = Path(settings.ROOT_PATH) / "plugins" / "data" / "ugnascredits" / "credits.json"
         self._last_run_time: str = ""
         self._last_run_status: bool = False
         self._last_run_message: str = "" 
