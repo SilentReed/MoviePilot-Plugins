@@ -16,7 +16,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "1.8.1"
+    plugin_version = "1.9.0"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -31,8 +31,8 @@ class ServerChan(_PluginBase):
     # 常量定义
     DEFAULT_PLUGIN_ORDER = 27
     DEFAULT_AUTH_LEVEL = 1
-    REQUEST_TIMEOUT = 10  # 请求超时时间（秒）
-    MAX_LOG_LENGTH = 200  # 日志最大长度
+    REQUEST_TIMEOUT = 10
+    MAX_LOG_LENGTH = 200
 
     # 私有属性
     _enabled = False
@@ -50,11 +50,8 @@ class ServerChan(_PluginBase):
             self._msgtypes = config.get("msgtypes") or []
 
         if self._onlyonce:
-            # 发送测试消息
-            self._send_message("Server酱³通知测试", "插件已启用")
-            # 关闭一次性开关
+            self._send_message("Server酱³通知测试", "插件已启用", None)
             self._onlyonce = False
-            # 保存配置
             self.__update_config()
 
     def get_state(self) -> bool:
@@ -72,12 +69,7 @@ class ServerChan(_PluginBase):
         pass
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
-        """
-        拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
-        """
-        # 遍历 NotificationType 枚举，生成消息类型选项
         MsgTypeOptions = self._build_message_type_options()
-        
         return self._build_form_config(MsgTypeOptions), {
             "enabled": False,
             "onlyonce": False,
@@ -87,7 +79,6 @@ class ServerChan(_PluginBase):
         }
 
     def _build_message_type_options(self) -> List[Dict[str, str]]:
-        """构建消息类型选项"""
         options = []
         for item in NotificationType:
             options.append({
@@ -97,21 +88,16 @@ class ServerChan(_PluginBase):
         return options
 
     def _build_form_config(self, msg_type_options: List[Dict[str, str]]) -> List[dict]:
-        """构建表单配置"""
         return [
             {
                 'component': 'VForm',
                 'content': [
-                    # 基本设置
                     {
                         'component': 'VRow',
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
+                                'props': {'cols': 12, 'md': 6},
                                 'content': [
                                     {
                                         'component': 'VSwitch',
@@ -124,10 +110,7 @@ class ServerChan(_PluginBase):
                             },
                             {
                                 'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
+                                'props': {'cols': 12, 'md': 6},
                                 'content': [
                                     {
                                         'component': 'VSwitch',
@@ -140,16 +123,12 @@ class ServerChan(_PluginBase):
                             }
                         ]
                     },
-                    # UID 和 SendKey
                     {
                         'component': 'VRow',
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
+                                'props': {'cols': 12, 'md': 4},
                                 'content': [
                                     {
                                         'component': 'VTextField',
@@ -164,10 +143,7 @@ class ServerChan(_PluginBase):
                             },
                             {
                                 'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 8
-                                },
+                                'props': {'cols': 12, 'md': 8},
                                 'content': [
                                     {
                                         'component': 'VTextField',
@@ -182,15 +158,12 @@ class ServerChan(_PluginBase):
                             }
                         ]
                     },
-                    # 消息类型选择
                     {
                         'component': 'VRow',
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
+                                'props': {'cols': 12},
                                 'content': [
                                     {
                                         'component': 'VSelect',
@@ -213,16 +186,16 @@ class ServerChan(_PluginBase):
     def get_page(self) -> List[dict]:
         pass
 
-    def _send_message(self, title: str, text: str) -> Optional[Tuple[bool, str]]:
+    def _send_message(self, title: str, text: str, image: Optional[str] = None) -> Optional[Tuple[bool, str]]:
         """
-        发送消息
+        发送消息，支持图片
         """
         try:
             if not self._validate_config():
                 return False, "参数未配置"
 
             url = self._build_send_url()
-            data = self._build_message_data(title, text)
+            data = self._build_message_data(title, text, image)
 
             logger.info(f"Server酱³ 发送消息: {title}")
             res = RequestUtils(timeout=self.REQUEST_TIMEOUT).post_res(url, data=data)
@@ -243,35 +216,36 @@ class ServerChan(_PluginBase):
             return False, f"发送异常: {str(e)}"
 
     def _validate_config(self) -> bool:
-        """验证配置参数"""
         if not self._uid or not self._sendkey:
             logger.error("Server酱³ UID 或 SendKey 未配置")
             return False
-        
-        # 验证UID格式（应该是数字）
         if not str(self._uid).isdigit():
             logger.error("Server酱³ UID 格式错误，应为数字")
             return False
-        
-        # 验证SendKey格式
         if not self._sendkey.startswith('sctp'):
             logger.warning("Server酱³ SendKey 格式可能不正确")
-        
         return True
 
     def _build_send_url(self) -> str:
-        """构建发送URL"""
         return f"https://{self._uid}.push.ft07.com/send/{self._sendkey}.send"
 
-    def _build_message_data(self, title: str, text: str) -> Dict[str, str]:
-        """构建消息数据"""
+    def _build_message_data(self, title: str, text: str, image: Optional[str] = None) -> Dict[str, str]:
+        """
+        构建消息数据，支持图片
+        """
+        # 构建 Markdown 内容
+        content = f"{title}\n\n{text}"
+        
+        # 如果有图片，添加到内容中
+        if image:
+            content += f"\n\n![封面]({image})"
+        
         return {
             "title": title,
-            "desp": f"{title}\n\n{text}",
+            "desp": content,
         }
 
     def _handle_response(self, res, title: str) -> Tuple[bool, str]:
-        """处理响应结果"""
         if not res:
             logger.warn("Server酱³请求失败，无响应")
             return False, "请求失败，无响应"
@@ -297,9 +271,6 @@ class ServerChan(_PluginBase):
 
     @eventmanager.register(EventType.NoticeMessage)
     def send(self, event: Event):
-        """
-        消息发送事件
-        """
         if not self.get_state():
             logger.debug("Server酱³ 插件未启用或参数未配置")
             return
@@ -314,6 +285,8 @@ class ServerChan(_PluginBase):
         title = msg_body.get("title")
         # 文本
         text = msg_body.get("text")
+        # 图片（封面图）
+        image = msg_body.get("image")
 
         if not title and not text:
             logger.warn("Server酱³ 标题和内容不能同时为空")
@@ -324,15 +297,16 @@ class ServerChan(_PluginBase):
             return
 
         logger.info(f"Server酱³ 收到消息: {title}")
-        return self._send_message(title, text)
+        if image:
+            logger.info(f"Server酱³ 附带图片: {image}")
+        
+        return self._send_message(title, text, image)
 
     def _should_send_message(self, msg_body: Dict) -> bool:
-        """判断是否应该发送消息"""
         msg_type = msg_body.get("type")
         if not msg_type or not self._msgtypes:
             return True
         
-        # 如果配置了消息类型，则只发送选中的类型
         if isinstance(msg_type, NotificationType):
             if msg_type.name not in self._msgtypes:
                 logger.debug(f"Server酱³ 消息类型 {msg_type.value} 未开启，跳过")
@@ -345,9 +319,6 @@ class ServerChan(_PluginBase):
         return True
 
     def __update_config(self):
-        """
-        保存插件配置
-        """
         self.update_config(
             {
                 "enabled": self._enabled,
@@ -359,7 +330,4 @@ class ServerChan(_PluginBase):
         )
 
     def stop_service(self):
-        """
-        退出插件
-        """
         pass
