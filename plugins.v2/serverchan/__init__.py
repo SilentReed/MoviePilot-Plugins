@@ -173,8 +173,8 @@ class ServerChan(_PluginBase):
                                         'props': {
                                             'model': 'tags',
                                             'label': '标签',
-                                            'placeholder': 'MoviePilot',
-                                            'hint': '通知标签，会添加到标题前面，如 [MoviePilot] 标题',
+                                            'placeholder': 'MoviePilot|媒体',
+                                            'hint': '标签列表，多个标签使用竖线(|)分隔',
                                         }
                                     }
                                 ]
@@ -256,20 +256,20 @@ class ServerChan(_PluginBase):
         """
         构建消息数据，支持图片和标签
         """
-        # 如果有标签，添加到标题前面
-        display_title = f"[{self._tags}] {title}" if self._tags else title
+        data = {
+            "title": title,
+            "desp": f"{title}\n\n{text}",
+        }
         
-        # 构建 Markdown 内容
-        content = f"{display_title}\n\n{text}"
+        # 添加标签
+        if self._tags:
+            data["tags"] = self._tags
         
         # 如果有图片，添加到内容中
         if image:
-            content += f"\n\n![封面]({image})"
+            data["desp"] += f"\n\n![封面]({image})"
         
-        return {
-            "title": display_title,
-            "desp": content,
-        }
+        return data
 
     def _handle_response(self, res, title: str) -> Tuple[bool, str]:
         if not res:
