@@ -3,7 +3,7 @@
     "name": "Server酱³通知",
     "description": "通过Server酱³发送消息通知，支持APP推送",
     "labels": "通知,Server酱",
-    "version": "1.8.2",
+    "version": "1.8.3",
     "icon": "icons/serverchan.png",
     "author": "SilentReed",
     "level": 1,
@@ -18,7 +18,8 @@
       "v1.0.6": "修复NotificationType属性错误",
       "1.8.0": "版本升级",
       "1.8.1": "版本升级",
-      "1.8.2": "入库通知支持封面图片"
+      "1.8.2": "入库通知支持封面图片",
+      "1.8.3": "新增标签配置功能"
     }
   }
 }

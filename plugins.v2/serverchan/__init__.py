@@ -16,7 +16,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "1.8.2"
+    plugin_version = "1.8.3"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -39,6 +39,7 @@ class ServerChan(_PluginBase):
     _onlyonce = False
     _uid = None
     _sendkey = None
+    _tags = ""
     _msgtypes = []
 
     def init_plugin(self, config: dict = None):
@@ -47,6 +48,7 @@ class ServerChan(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._uid = config.get("uid")
             self._sendkey = config.get("sendkey")
+            self._tags = config.get("tags") or ""
             self._msgtypes = config.get("msgtypes") or []
 
         if self._onlyonce:
@@ -75,6 +77,7 @@ class ServerChan(_PluginBase):
             "onlyonce": False,
             "uid": "",
             "sendkey": "",
+            "tags": "",
             "msgtypes": []
         }
 
@@ -166,6 +169,26 @@ class ServerChan(_PluginBase):
                                 'props': {'cols': 12},
                                 'content': [
                                     {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'tags',
+                                            'label': '标签',
+                                            'placeholder': 'MoviePilot',
+                                            'hint': '通知标签，会添加到标题前面，如 [MoviePilot] 标题',
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {'cols': 12},
+                                'content': [
+                                    {
                                         'component': 'VSelect',
                                         'props': {
                                             'multiple': True,
@@ -188,7 +211,7 @@ class ServerChan(_PluginBase):
 
     def _send_message(self, title: str, text: str, image: Optional[str] = None) -> Optional[Tuple[bool, str]]:
         """
-        发送消息，支持图片
+        发送消息，支持图片和标签
         """
         try:
             if not self._validate_config():
@@ -231,17 +254,20 @@ class ServerChan(_PluginBase):
 
     def _build_message_data(self, title: str, text: str, image: Optional[str] = None) -> Dict[str, str]:
         """
-        构建消息数据，支持图片
+        构建消息数据，支持图片和标签
         """
+        # 如果有标签，添加到标题前面
+        display_title = f"[{self._tags}] {title}" if self._tags else title
+        
         # 构建 Markdown 内容
-        content = f"{title}\n\n{text}"
+        content = f"{display_title}\n\n{text}"
         
         # 如果有图片，添加到内容中
         if image:
             content += f"\n\n![封面]({image})"
         
         return {
-            "title": title,
+            "title": display_title,
             "desp": content,
         }
 
@@ -325,6 +351,7 @@ class ServerChan(_PluginBase):
                 "onlyonce": self._onlyonce,
                 "uid": self._uid,
                 "sendkey": self._sendkey,
+                "tags": self._tags,
                 "msgtypes": self._msgtypes,
             }
         )
