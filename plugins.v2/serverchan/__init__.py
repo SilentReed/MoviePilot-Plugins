@@ -16,7 +16,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "1.8.3"
+    plugin_version = "1.8.4"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
