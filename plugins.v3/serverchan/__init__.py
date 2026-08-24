@@ -18,7 +18,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "2.1.0"
+    plugin_version = "2.1.1"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -106,9 +106,97 @@ class ServerChan(_PluginBase):
             "msgtypes": [],
         }
 
-    def get_page(self) -> list[dict]:
+    def get_page(self) -> list[dict] | None:
         """返回插件详情页。"""
-        return []
+        status_text = "已启用" if self.get_state() else "未启用"
+        status_color = "success" if self.get_state() else "warning"
+        uid_display = self._uid or "未识别"
+        sendkey_display = f"{self._sendkey[:10]}..." if self._sendkey and len(self._sendkey) > 10 else (self._sendkey or "未配置")
+
+        return [
+            {
+                "component": "VCard",
+                "props": {"variant": "tonal"},
+                "content": [
+                    {
+                        "component": "VCardTitle",
+                        "props": {"class": "text-h6"},
+                        "text": "Server酱³通知 状态",
+                    },
+                    {
+                        "component": "VCardText",
+                        "content": [
+                            {
+                                "component": "VRow",
+                                "content": [
+                                    {
+                                        "component": "VCol",
+                                        "props": {"cols": 6},
+                                        "content": [
+                                            {
+                                                "component": "VAlert",
+                                                "props": {
+                                                    "type": status_color,
+                                                    "variant": "tonal",
+                                                    "text": f"状态: {status_text}",
+                                                },
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        "component": "VCol",
+                                        "props": {"cols": 6},
+                                        "content": [
+                                            {
+                                                "component": "VAlert",
+                                                "props": {
+                                                    "type": "info",
+                                                    "variant": "tonal",
+                                                    "text": f"UID: {uid_display}",
+                                                },
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                            {
+                                "component": "VRow",
+                                "content": [
+                                    {
+                                        "component": "VCol",
+                                        "props": {"cols": 6},
+                                        "content": [
+                                            {
+                                                "component": "VAlert",
+                                                "props": {
+                                                    "type": "info",
+                                                    "variant": "tonal",
+                                                    "text": f"SendKey: {sendkey_display}",
+                                                },
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        "component": "VCol",
+                                        "props": {"cols": 6},
+                                        "content": [
+                                            {
+                                                "component": "VAlert",
+                                                "props": {
+                                                    "type": "info",
+                                                    "variant": "tonal",
+                                                    "text": f"版本: v{self.plugin_version}",
+                                                },
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            }
+        ]
 
     def stop_service(self) -> None:
         """释放插件创建的后台资源。"""
