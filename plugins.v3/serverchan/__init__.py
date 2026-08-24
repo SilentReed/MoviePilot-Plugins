@@ -1,5 +1,5 @@
+import re
 from typing import Any
-from urllib.parse import parse_qs
 
 from app.sdk.events import Event, eventmanager
 from app.sdk.logging import logger
@@ -18,7 +18,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.1.0"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -47,10 +47,12 @@ class ServerChan(_PluginBase):
         config = config or {}
         self._enabled = bool(config.get("enabled"))
         self._onlyonce = bool(config.get("onlyonce"))
-        self._uid = config.get("uid")
         self._sendkey = config.get("sendkey")
         self._tags = config.get("tags") or ""
         self._msgtypes = config.get("msgtypes") or []
+
+        # 自动从 SendKey 提取 UID
+        self._uid = self._extract_uid(self._sendkey)
 
         if self._onlyonce:
             import threading
@@ -61,6 +63,20 @@ class ServerChan(_PluginBase):
             ).start()
             self._onlyonce = False
             self._save_config()
+
+    @staticmethod
+    def _extract_uid(sendkey: str | None) -> str | None:
+        """从 SendKey 中自动提取 UID。
+
+        Server酱³ SendKey 格式: sctp{UID}t{rest}
+        例如: sctp123456txxxxxxxxxxxxx → UID = 123456
+        """
+        if not sendkey:
+            return None
+        match = re.match(r"^sctp(\d+)t", sendkey)
+        if match:
+            return match.group(1)
+        return None
 
     def get_state(self) -> bool:
         """返回插件当前是否启用。"""
@@ -85,7 +101,6 @@ class ServerChan(_PluginBase):
         return self._build_form_config(msg_type_options), {
             "enabled": False,
             "onlyonce": False,
-            "uid": "",
             "sendkey": "",
             "tags": "",
             "msgtypes": [],
@@ -157,22 +172,7 @@ class ServerChan(_PluginBase):
                         "content": [
                             {
                                 "component": "VCol",
-                                "props": {"cols": 12, "md": 4},
-                                "content": [
-                                    {
-                                        "component": "VTextField",
-                                        "props": {
-                                            "model": "uid",
-                                            "label": "UID",
-                                            "placeholder": "123456",
-                                            "hint": "Server酱³ 用户 ID",
-                                        },
-                                    }
-                                ],
-                            },
-                            {
-                                "component": "VCol",
-                                "props": {"cols": 12, "md": 8},
+                                "props": {"cols": 12},
                                 "content": [
                                     {
                                         "component": "VTextField",
@@ -180,7 +180,7 @@ class ServerChan(_PluginBase):
                                             "model": "sendkey",
                                             "label": "SendKey",
                                             "placeholder": "sctp123456txxxxxxxxxxxxx",
-                                            "hint": "在 Server酱³ 官网获取",
+                                            "hint": "在 Server酱³ 官网获取，UID 会自动从 SendKey 提取",
                                         },
                                     }
                                 ],
@@ -239,7 +239,6 @@ class ServerChan(_PluginBase):
         return self.update_config({
             "enabled": self._enabled,
             "onlyonce": self._onlyonce,
-            "uid": self._uid,
             "sendkey": self._sendkey,
             "tags": self._tags,
             "msgtypes": self._msgtypes,
@@ -257,17 +256,15 @@ class ServerChan(_PluginBase):
         except Exception as e:
             logger.error(f"Server酱³ 测试消息发送失败: {e}")
 
-    def _validate_config(self) -> bool:
-        """校验必要配置项。"""
-        if not self._uid or not self._sendkey:
-            logger.error("Server酱³ UID 或 SendKey 未配置")
-            return False
-        if not str(self._uid).isdigit():
-            logger.error("Server酱³ UID 格式错误，应为数字")
-            return False
+    def _validate_config(self) -> str | None:
+        """校验必要配置项，返回错误信息或 None。"""
+        if not self._sendkey:
+            return "请填写 SendKey"
+        if not self._uid:
+            return f"无法从 SendKey 提取 UID，请检查格式（应为 sctp{{数字}}t...）"
         if not self._sendkey.startswith("sctp"):
-            logger.warning("Server酱³ SendKey 格式可能不正确")
-        return True
+            return "SendKey 格式不正确，应以 sctp 开头"
+        return None
 
     def _build_send_url(self) -> str:
         """构建发送 URL。"""
@@ -293,8 +290,10 @@ class ServerChan(_PluginBase):
     ) -> tuple[bool, str]:
         """异步发送消息，支持图片和标签。"""
         try:
-            if not self._validate_config():
-                return False, "参数未配置"
+            error = self._validate_config()
+            if error:
+                logger.error(f"Server酱³: {error}")
+                return False, error
 
             url = self._build_send_url()
             data = self._build_message_data(title, text, image, self._tags)
@@ -395,4 +394,8 @@ class ServerChan(_PluginBase):
         if image:
             logger.info(f"Server酱³ 附带图片: {image}")
 
-        await self._async_send_message(title, text, image)
+        result = await self._async_send_message(title, text, image)
+        if result:
+            success, msg = result
+            if not success:
+                logger.warning(f"Server酱³ 发送失败: {msg}")
