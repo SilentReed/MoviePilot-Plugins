@@ -1,0 +1,28 @@
+{
+  "ServerChan": {
+    "name": "Server酱³通知",
+    "description": "通过 Server酱³ 发送消息通知，支持 APP 推送",
+    "labels": "通知,Server酱",
+    "version": "2.0.0",
+    "icon": "icons/serverchan.png",
+    "author": "SilentReed",
+    "level": 1,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK：导入迁移至 app.sdk 体系，HTTP 客户端改用 AsyncRequestUtils (HTTPX2)，移除旧版兼容层依赖。",
+      "v1.8.5": "版本更新测试。",
+      "v1.8.4": "tags 作为 API 原生参数传递，多个标签用竖线(|)分隔。",
+      "v1.8.3": "新增标签（tags）配置功能。",
+      "v1.8.2": "入库通知支持封面图片。",
+      "v1.8.1": "版本升级。",
+      "v1.7.0": "测试功能自动关闭开关。",
+      "v1.6.0": "代码结构优化和异常处理改进。",
+      "v1.5.0": "插件图标路径变更为本地图标。",
+      "v1.0.9": "增加本地图标文件 serverchan.png。",
+      "v1.0.8": "增加插件图标。",
+      "v1.0.7": "修复消息类型过滤逻辑，增加日志输出。",
+      "v1.0.6": "修复 NotificationType 属性错误。",
+      "v1.0.5": "适配 V2 插件规范，使用 get_form 方法。"
+    }
+  }
+}
