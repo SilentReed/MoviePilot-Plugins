@@ -18,7 +18,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "2.0.0"
+    plugin_version = "2.0.1"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -53,8 +53,12 @@ class ServerChan(_PluginBase):
         self._msgtypes = config.get("msgtypes") or []
 
         if self._onlyonce:
-            import asyncio
-            asyncio.create_task(self._async_send_message("Server酱³通知测试", "插件已启用"))
+            import threading
+            threading.Thread(
+                target=self._thread_send_message,
+                args=("Server酱³通知测试", "插件已启用"),
+                daemon=True,
+            ).start()
             self._onlyonce = False
             self._save_config()
 
@@ -242,6 +246,16 @@ class ServerChan(_PluginBase):
         })
 
     # ---- 消息发送 ----
+
+    def _thread_send_message(self, title: str, text: str) -> None:
+        """在线程中同步调用异步发送方法。"""
+        import asyncio
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self._async_send_message(title, text))
+            loop.close()
+        except Exception as e:
+            logger.error(f"Server酱³ 测试消息发送失败: {e}")
 
     def _validate_config(self) -> bool:
         """校验必要配置项。"""
