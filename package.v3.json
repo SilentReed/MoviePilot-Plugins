@@ -1,14 +1,15 @@
 {
   "ServerChan": {
     "name": "Server酱³通知",
-    "description": "通过 Server酱³ / SCMax 发送消息通知，支持 APP 推送（scx- 前缀走 max.ft07.com）",
+    "description": "通过 Server酱³ / SCMax 发送消息通知，支持 APP 推送（scx- 前缀需填专属接口地址）",
     "labels": "通知,Server酱",
-    "version": "2.2.0",
+    "version": "2.2.1",
     "icon": "icons/serverchan.png",
     "author": "SilentReed",
     "level": 1,
     "system_version": ">=3.0.0",
     "history": {
+      "v2.2.1": "使用 SCMax（scx- 开头 SendKey）时「接口地址」改为必填，需填入账户专属推送地址（如 https://{UID}.max.ft07.com）；Server酱³ 仍可留空自动判断。",
       "v2.2.0": "适配 SCMax：支持 scx-{UID}-{TOKEN} 格式 SendKey 并自动切换 max.ft07.com 域名，新增可选 api_base 自定义接口地址。",
       "v2.1.1": "添加插件详情页，显示启用状态、UID、SendKey 和版本信息。",
       "v2.1.0": "UID 自动从 SendKey 提取，移除 UID 手动输入；错误信息反馈给用户。",

@@ -18,7 +18,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "2.2.0"
+    plugin_version = "2.2.1"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -95,7 +95,10 @@ class ServerChan(_PluginBase):
             return False
         if not self._sendkey:
             return False
-        # 未显式指定接口地址时，必须能从 SendKey 解析出 UID
+        # SCMax（scx- 开头）必须显式填写专属推送地址
+        if self._sendkey.startswith("scx-") and not self._api_base:
+            return False
+        # 其余情况未指定接口地址时，必须能从 SendKey 解析出 UID
         if not self._api_base and not self._uid:
             return False
         return True
@@ -283,7 +286,7 @@ class ServerChan(_PluginBase):
                                             "model": "sendkey",
                                             "label": "SendKey",
                                             "placeholder": "scx-10325-xxxxxxxxxxxxxxxx 或 sctp123456txxxxxxxx",
-                                            "hint": "SCMax 的 SendKey 形如 scx-{UID}-{TOKEN}，Server酱³ 形如 sctp{UID}t{TOKEN}；UID 会自动从 SendKey 提取，并据此选择接口域名",
+                                            "hint": "SCMax 的 SendKey 形如 scx-{UID}-{TOKEN}（需同时填写接口地址），Server酱³ 形如 sctp{UID}t{TOKEN}（接口地址可留空）",
                                         },
                                     }
                                 ],
@@ -301,9 +304,9 @@ class ServerChan(_PluginBase):
                                         "component": "VTextField",
                                         "props": {
                                             "model": "api_base",
-                                            "label": "接口地址（可选）",
-                                            "placeholder": "https://{UID}.max.ft07.com",
-                                            "hint": "留空则按 SendKey 前缀自动判断：scx- 走 SCMax（max.ft07.com），sctp 走 Server酱³（push.ft07.com）；如需走自建/反代域名可在此填写，插件将向 {接口地址}/send/{SendKey} 发送",
+                                            "label": "接口地址（使用 SCMax 时必填）",
+                                            "placeholder": "https://10325.max.ft07.com",
+                                            "hint": "使用 SCMax（SendKey 以 scx- 开头）时必填：请填写 SCMax 控制台给出的账户专属推送地址，形如 https://{你的UID}.max.ft07.com；使用 Server酱³（sctp 开头）时可留空，插件将自动走 https://{UID}.push.ft07.com。插件会向 {接口地址}/send/{SendKey} 发送",
                                         },
                                     }
                                 ],
@@ -384,6 +387,11 @@ class ServerChan(_PluginBase):
         """校验必要配置项，返回错误信息或 None。"""
         if not self._sendkey:
             return "请填写 SendKey"
+        if self._sendkey.startswith("scx-") and not self._api_base:
+            return (
+                "使用 SCMax 的 SendKey（scx- 开头）时必须填写接口地址，"
+                "请登录 SCMax 控制台复制账户专属推送地址，形如 https://{你的UID}.max.ft07.com"
+            )
         if self._uid is None and not self._api_base:
             return (
                 "无法从 SendKey 提取 UID，请检查格式："
@@ -395,8 +403,8 @@ class ServerChan(_PluginBase):
     def _build_send_url(self) -> str:
         """构建发送 URL。
 
-        优先使用显式配置的接口地址，否则按 SendKey 前缀自动选择：
-        - SCMax: https://{UID}.max.ft07.com/send/{SendKey}
+        优先使用显式配置的接口地址（SCMax 下为必填）：
+        - SCMax: {接口地址}/send/{SendKey}，接口地址未填时兜底 https://{UID}.max.ft07.com
         - Server酱³: https://{UID}.push.ft07.com/send/{SendKey}.send
         """
         if self._api_base:

@@ -27,18 +27,18 @@ AIGC:
 
 | 参数 | 说明 | 获取方式 |
 |------|------|----------|
-| SendKey | 支持两种格式：SCMax 的 `scx-{UID}-{TOKEN}`、Server酱³ 的 `sctp{UID}t{TOKEN}`，UID 会自动提取 | SCMax: [https://max.ft07.com/](https://max.ft07.com/) ｜ Server酱³: [https://sc3.ft07.com/](https://sc3.ft07.com/) |
-| 接口地址（可选） | 留空按 SendKey 前缀自动选择；填写后向 `{接口地址}/send/{SendKey}` 发送，可用于自建或反代域名 | 例：`https://10325.max.ft07.com` |
+| SendKey | 支持两种格式：SCMax 的 `scx-{UID}-{TOKEN}`（需同时填接口地址）、Server酱³ 的 `sctp{UID}t{TOKEN}` | SCMax: [https://max.ft07.com/](https://max.ft07.com/) ｜ Server酱³: [https://sc3.ft07.com/](https://sc3.ft07.com/) |
+| 接口地址 | **使用 SCMax（`scx-` 开头）时必填**，填写账户专属推送地址；Server酱³（`sctp` 开头）可留空自动判断。插件向 `{接口地址}/send/{SendKey}` 发送 | SCMax 控制台首页可见，例：`https://10325.max.ft07.com` |
 | 标签 | 消息标签列表 | 多个标签用竖线(\|)分隔 |
 | 消息类型 | 选择需要接收的通知类型 | 不选则接收所有 |
 
 ### 接口地址自动选择规则
 
-| SendKey 前缀 | 请求地址 |
-|--------------|----------|
-| `scx-` | `https://{UID}.max.ft07.com/send/{SendKey}`（SCMax） |
-| `sctp` | `https://{UID}.push.ft07.com/send/{SendKey}.send`（Server酱³） |
-| 任意 + 已填接口地址 | `{接口地址}/send/{SendKey}` |
+| SendKey 前缀 | 接口地址 | 请求地址 |
+|--------------|----------|----------|
+| `scx-` | 必填 | `{接口地址}/send/{SendKey}`（SCMax） |
+| `sctp` | 可留空 | 留空时 `https://{UID}.push.ft07.com/send/{SendKey}.send`（Server酱³） |
+| 任意 | 已填 | `{接口地址}/send/{SendKey}` |
 
 ## 安装方式
 
@@ -47,6 +47,11 @@ AIGC:
 3. 在插件市场搜索「Server酱通知」并安装
 
 ## 版本历史
+
+### v2.2.1
+
+- 使用 SCMax（`scx-` 开头 SendKey）时「接口地址」改为必填，需填账户专属推送地址（如 `https://{UID}.max.ft07.com`）
+- Server酱³ 仍可留空，按 UID 自动走 `push.ft07.com`
 
 ### v2.2.0
 
