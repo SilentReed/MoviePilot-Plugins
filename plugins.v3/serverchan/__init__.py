@@ -18,7 +18,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "2.3.0"
+    plugin_version = "2.3.1"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -445,44 +445,62 @@ class ServerChan(_PluginBase):
 
     @staticmethod
     def _format_text(title: str | None, text: str | None) -> str:
-        """把上游纯文本整理成适合微信端渲染的 Markdown 正文。
+        """把任意上游文本整理成适合微信端渲染的 Markdown 正文（不改动文字内容）。
 
-        - 去掉与标题重复的首行（上游常把标题又写进正文）
-        - 形如 `1. 名称 | k：v | k：v` 的条目拆成「加粗标题 + 一行要点」
-        - 非空行末尾补两个空格，避免微信端把换行吞成一段
-        - 已含 Markdown 表格或代码块时保持原样，避免破坏结构
+        通用规则，对全部通知生效：
+        - 去掉与标题完全重复的首行，去掉首尾空行
+        - 行内以 `|` 分隔的多字段（≥3 段且至少两段为 `键：值`）拆成两行：
+          首段单独成行（带序号时加粗），其余各段用 ` · ` 连接
+        - 每个非空行末尾补两个空格（Markdown 硬换行），修复微信端把多行挤成一段
+        - 代码块、Markdown 表格行、标题/引用/列表/图片行原样保留，只补硬换行
         """
         if not text:
             return ""
-        lines = [ln.rstrip() for ln in str(text).replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+        normalized = str(text).replace("\r\n", "\n").replace("\r", "\n")
+        lines = [ln.rstrip() for ln in normalized.split("\n")]
         while lines and not lines[0].strip():
             lines.pop(0)
         while lines and not lines[-1].strip():
             lines.pop()
         if title and lines:
-            first = lines[0].strip().strip("*#").strip()
-            if first and first == str(title).strip():
+            head = lines[0].strip().strip("*#").strip()
+            if head and head == str(title).strip():
                 lines.pop(0)
                 while lines and not lines[0].strip():
                     lines.pop(0)
 
-        has_structure = any(ln.lstrip().startswith("|") or "```" in ln for ln in lines)
-
         out: list[str] = []
+        in_code = False
         for ln in lines:
             raw = ln.rstrip()
-            if not raw.strip():
+            stripped = raw.strip()
+            if stripped.startswith("```"):
+                in_code = not in_code
+                out.append(raw)
+                continue
+            if in_code:
+                out.append(raw)
+                continue
+            if not stripped:
                 out.append("")
                 continue
-            m = ServerChan.ITEM_LINE_RE.match(raw)
-            if m and "|" in raw and "：" in raw:
-                body = m.group(2)
-                parts = [p.strip() for p in body.split("|") if p.strip()]
-                if len(parts) >= 2:
-                    out.append(f"**{m.group(1)}. {parts[0]}**  ")
-                    out.append(f"{' · '.join(parts[1:])}  ")
-                    continue
-            out.append(raw if has_structure else raw + "  ")
+            # Markdown 表格行保持结构，不能被拆
+            if stripped.startswith("|"):
+                out.append(raw)
+                continue
+            # 行内多字段拆分：如 `1. 朱雀 | 状态：启用 | Cookie：已配置 | 域名：xxx`
+            segments = [seg.strip() for seg in raw.split("|")]
+            segments = [seg for seg in segments if seg]
+            kv_like = sum(1 for seg in segments[1:] if "：" in seg or ": " in seg)
+            if len(segments) >= 3 and kv_like >= 2:
+                head_text = segments[0]
+                if ServerChan.ITEM_LINE_RE.match(head_text):
+                    head_text = f"**{head_text}**"
+                out.append(head_text + "  ")
+                out.append(" · ".join(segments[1:]) + "  ")
+                continue
+            # Markdown 结构行（标题/引用/列表/图片）只补硬换行
+            out.append(raw + "  ")
         return "\n".join(out).strip()
 
     def _build_message_data(
