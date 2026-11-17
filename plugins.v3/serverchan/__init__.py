@@ -449,8 +449,9 @@ class ServerChan(_PluginBase):
 
         通用规则，对全部通知生效：
         - 去掉与标题完全重复的首行，去掉首尾空行
-        - 行内以 `|` 分隔的多字段（≥3 段且至少两段为 `键：值`）拆成两行：
-          首段单独成行（带序号时加粗），其余各段用 ` · ` 连接
+        - 形如 `名称 | k：v | k：v` 的行（≥3 段、首段为名称、后段多数为键值）拆成两行：
+          名称单独成行（带序号时加粗），其余各段用 ` · ` 连接
+        - 首段本身就是 `键：值` 的流水行不做拆分，仅补硬换行，避免把键值对拆碎
         - 每个非空行末尾补两个空格（Markdown 硬换行），修复微信端把多行挤成一段
         - 代码块、Markdown 表格行、标题/引用/列表/图片行原样保留，只补硬换行
         """
@@ -492,7 +493,9 @@ class ServerChan(_PluginBase):
             segments = [seg.strip() for seg in raw.split("|")]
             segments = [seg for seg in segments if seg]
             kv_like = sum(1 for seg in segments[1:] if "：" in seg or ": " in seg)
-            if len(segments) >= 3 and kv_like >= 2:
+            head_is_kv = "：" in segments[0] or ": " in segments[0] if segments else True
+            # 首段必须是「名称」而不是键值对，否则是键值流水行，整行保留更保真
+            if len(segments) >= 3 and kv_like >= 2 and not head_is_kv:
                 head_text = segments[0]
                 if ServerChan.ITEM_LINE_RE.match(head_text):
                     head_text = f"**{head_text}**"
