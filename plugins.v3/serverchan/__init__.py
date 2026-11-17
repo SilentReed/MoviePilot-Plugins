@@ -18,7 +18,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "2.2.1"
+    plugin_version = "2.3.0"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -42,6 +42,7 @@ class ServerChan(_PluginBase):
     _api_base: str = ""
     _tags: str = ""
     _msgtypes: list[str] = []
+    _layout: bool = True
 
     # SendKey 格式：SCMax 为 scx-{UID}-{TOKEN}，Server酱³ 为 sctp{UID}t{TOKEN}
     SCMAX_KEY_RE = re.compile(r"^scx-(\d+)-")
@@ -49,6 +50,8 @@ class ServerChan(_PluginBase):
     # 留空时按 SendKey 前缀自动选择接口域名
     SCMAX_BASE = "https://{uid}.max.ft07.com"
     SCT_BASE = "https://{uid}.push.ft07.com"
+    # 形如 `1. 名称 | 状态：启用 | Cookie：已配置` 的条目行
+    ITEM_LINE_RE = re.compile(r"^\s*(\d+)[.、]\s*(.+?)\s*$")
 
     def init_plugin(self, config: dict | None = None) -> None:
         """读取配置并建立本次运行所需状态。"""
@@ -59,6 +62,9 @@ class ServerChan(_PluginBase):
         self._api_base = (config.get("api_base") or "").strip()
         self._tags = config.get("tags") or ""
         self._msgtypes = config.get("msgtypes") or []
+        # 旧配置没有该字段时默认开启排版优化
+        layout = config.get("layout")
+        self._layout = True if layout is None else bool(layout)
 
         # 自动从 SendKey 提取 UID
         self._uid = self._extract_uid(self._sendkey)
@@ -122,6 +128,7 @@ class ServerChan(_PluginBase):
             "api_base": "",
             "tags": "",
             "msgtypes": [],
+            "layout": True,
         }
 
     def get_page(self) -> list[dict] | None:
@@ -341,6 +348,25 @@ class ServerChan(_PluginBase):
                                 "props": {"cols": 12},
                                 "content": [
                                     {
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "layout",
+                                            "label": "正文排版优化",
+                                            "hint": "去掉与标题重复的首行，把「1. 名称 | k：v | k：v」拆成两行要点，并补足换行，避免微信端把多行挤成一段",
+                                        },
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
+                                "props": {"cols": 12},
+                                "content": [
+                                    {
                                         "component": "VSelect",
                                         "props": {
                                             "multiple": True,
@@ -369,6 +395,7 @@ class ServerChan(_PluginBase):
             "api_base": self._api_base,
             "tags": self._tags,
             "msgtypes": self._msgtypes,
+            "layout": self._layout,
         })
 
     # ---- 消息发送 ----
@@ -417,13 +444,58 @@ class ServerChan(_PluginBase):
         return f"{self.SCT_BASE.format(uid=self._uid)}/send/{self._sendkey}.send"
 
     @staticmethod
+    def _format_text(title: str | None, text: str | None) -> str:
+        """把上游纯文本整理成适合微信端渲染的 Markdown 正文。
+
+        - 去掉与标题重复的首行（上游常把标题又写进正文）
+        - 形如 `1. 名称 | k：v | k：v` 的条目拆成「加粗标题 + 一行要点」
+        - 非空行末尾补两个空格，避免微信端把换行吞成一段
+        - 已含 Markdown 表格或代码块时保持原样，避免破坏结构
+        """
+        if not text:
+            return ""
+        lines = [ln.rstrip() for ln in str(text).replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        while lines and not lines[-1].strip():
+            lines.pop()
+        if title and lines:
+            first = lines[0].strip().strip("*#").strip()
+            if first and first == str(title).strip():
+                lines.pop(0)
+                while lines and not lines[0].strip():
+                    lines.pop(0)
+
+        has_structure = any(ln.lstrip().startswith("|") or "```" in ln for ln in lines)
+
+        out: list[str] = []
+        for ln in lines:
+            raw = ln.rstrip()
+            if not raw.strip():
+                out.append("")
+                continue
+            m = ServerChan.ITEM_LINE_RE.match(raw)
+            if m and "|" in raw and "：" in raw:
+                body = m.group(2)
+                parts = [p.strip() for p in body.split("|") if p.strip()]
+                if len(parts) >= 2:
+                    out.append(f"**{m.group(1)}. {parts[0]}**  ")
+                    out.append(f"{' · '.join(parts[1:])}  ")
+                    continue
+            out.append(raw if has_structure else raw + "  ")
+        return "\n".join(out).strip()
+
     def _build_message_data(
-        title: str, text: str, image: str | None = None, tags: str = ""
+        self, title: str, text: str, image: str | None = None, tags: str = ""
     ) -> dict[str, str]:
-        """构建消息数据，支持图片和标签。"""
+        """构建消息数据，支持图片、标签与排版优化。"""
+        if text:
+            desp = self._format_text(title, text) if self._layout else f"{title}\n\n{text}"
+        else:
+            desp = title or ""
         data: dict[str, str] = {
             "title": title,
-            "desp": f"{title}\n\n{text}",
+            "desp": desp,
         }
         if tags:
             data["tags"] = tags
