@@ -9,16 +9,16 @@ from app.schemas.types import EventType, NotificationType
 
 
 class ServerChan(_PluginBase):
-    """通过 Server酱³ 发送消息通知，支持 APP 推送。"""
+    """通过 Server酱 发送消息通知，同时支持 SCMax 与 Server酱³ 两种 SendKey。"""
 
     # 插件名称
     plugin_name = "Server酱³通知"
     # 插件描述
-    plugin_desc = "通过 Server酱³ 发送消息通知，支持 APP 推送"
+    plugin_desc = "通过 Server酱（SCMax / Server酱³）发送消息通知，支持 APP 推送"
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "2.1.1"
+    plugin_version = "2.2.0"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -39,15 +39,24 @@ class ServerChan(_PluginBase):
     _onlyonce: bool = False
     _uid: str | None = None
     _sendkey: str | None = None
+    _api_base: str = ""
     _tags: str = ""
     _msgtypes: list[str] = []
+
+    # SendKey 格式：SCMax 为 scx-{UID}-{TOKEN}，Server酱³ 为 sctp{UID}t{TOKEN}
+    SCMAX_KEY_RE = re.compile(r"^scx-(\d+)-")
+    SCT_KEY_RE = re.compile(r"^sctp(\d+)t")
+    # 留空时按 SendKey 前缀自动选择接口域名
+    SCMAX_BASE = "https://{uid}.max.ft07.com"
+    SCT_BASE = "https://{uid}.push.ft07.com"
 
     def init_plugin(self, config: dict | None = None) -> None:
         """读取配置并建立本次运行所需状态。"""
         config = config or {}
         self._enabled = bool(config.get("enabled"))
         self._onlyonce = bool(config.get("onlyonce"))
-        self._sendkey = config.get("sendkey")
+        self._sendkey = (config.get("sendkey") or "").strip() or None
+        self._api_base = (config.get("api_base") or "").strip()
         self._tags = config.get("tags") or ""
         self._msgtypes = config.get("msgtypes") or []
 
@@ -58,22 +67,24 @@ class ServerChan(_PluginBase):
             import threading
             threading.Thread(
                 target=self._thread_send_message,
-                args=("Server酱³通知测试", "插件已启用"),
+                args=("Server酱通知测试", "插件已启用"),
                 daemon=True,
             ).start()
             self._onlyonce = False
             self._save_config()
 
-    @staticmethod
-    def _extract_uid(sendkey: str | None) -> str | None:
+    @classmethod
+    def _extract_uid(cls, sendkey: str | None) -> str | None:
         """从 SendKey 中自动提取 UID。
 
-        Server酱³ SendKey 格式: sctp{UID}t{rest}
-        例如: sctp123456txxxxxxxxxxxxx → UID = 123456
+        支持两种格式：
+        - SCMax: scx-{UID}-{TOKEN}，例如 scx-10325-xxxx → UID = 10325
+        - Server酱³: sctp{UID}t{TOKEN}，例如 sctp123456txxxx → UID = 123456
         """
         if not sendkey:
             return None
-        match = re.match(r"^sctp(\d+)t", sendkey)
+        sendkey = sendkey.strip()
+        match = cls.SCMAX_KEY_RE.match(sendkey) or cls.SCT_KEY_RE.match(sendkey)
         if match:
             return match.group(1)
         return None
@@ -82,7 +93,10 @@ class ServerChan(_PluginBase):
         """返回插件当前是否启用。"""
         if not self._enabled:
             return False
-        if not self._uid or not self._sendkey:
+        if not self._sendkey:
+            return False
+        # 未显式指定接口地址时，必须能从 SendKey 解析出 UID
+        if not self._api_base and not self._uid:
             return False
         return True
 
@@ -102,6 +116,7 @@ class ServerChan(_PluginBase):
             "enabled": False,
             "onlyonce": False,
             "sendkey": "",
+            "api_base": "",
             "tags": "",
             "msgtypes": [],
         }
@@ -267,8 +282,28 @@ class ServerChan(_PluginBase):
                                         "props": {
                                             "model": "sendkey",
                                             "label": "SendKey",
-                                            "placeholder": "sctp123456txxxxxxxxxxxxx",
-                                            "hint": "在 Server酱³ 官网获取，UID 会自动从 SendKey 提取",
+                                            "placeholder": "scx-10325-xxxxxxxxxxxxxxxx 或 sctp123456txxxxxxxx",
+                                            "hint": "SCMax 的 SendKey 形如 scx-{UID}-{TOKEN}，Server酱³ 形如 sctp{UID}t{TOKEN}；UID 会自动从 SendKey 提取，并据此选择接口域名",
+                                        },
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
+                                "props": {"cols": 12},
+                                "content": [
+                                    {
+                                        "component": "VTextField",
+                                        "props": {
+                                            "model": "api_base",
+                                            "label": "接口地址（可选）",
+                                            "placeholder": "https://{UID}.max.ft07.com",
+                                            "hint": "留空则按 SendKey 前缀自动判断：scx- 走 SCMax（max.ft07.com），sctp 走 Server酱³（push.ft07.com）；如需走自建/反代域名可在此填写，插件将向 {接口地址}/send/{SendKey} 发送",
                                         },
                                     }
                                 ],
@@ -328,6 +363,7 @@ class ServerChan(_PluginBase):
             "enabled": self._enabled,
             "onlyonce": self._onlyonce,
             "sendkey": self._sendkey,
+            "api_base": self._api_base,
             "tags": self._tags,
             "msgtypes": self._msgtypes,
         })
@@ -342,21 +378,35 @@ class ServerChan(_PluginBase):
             loop.run_until_complete(self._async_send_message(title, text))
             loop.close()
         except Exception as e:
-            logger.error(f"Server酱³ 测试消息发送失败: {e}")
+            logger.error(f"Server酱 测试消息发送失败: {e}")
 
     def _validate_config(self) -> str | None:
         """校验必要配置项，返回错误信息或 None。"""
         if not self._sendkey:
             return "请填写 SendKey"
-        if not self._uid:
-            return f"无法从 SendKey 提取 UID，请检查格式（应为 sctp{{数字}}t...）"
-        if not self._sendkey.startswith("sctp"):
-            return "SendKey 格式不正确，应以 sctp 开头"
+        if self._uid is None and not self._api_base:
+            return (
+                "无法从 SendKey 提取 UID，请检查格式："
+                "SCMax 应为 scx-{UID}-{TOKEN}，Server酱³ 应为 sctp{UID}t{TOKEN}；"
+                "如使用自建接口，请一并填写接口地址"
+            )
         return None
 
     def _build_send_url(self) -> str:
-        """构建发送 URL。"""
-        return f"https://{self._uid}.push.ft07.com/send/{self._sendkey}.send"
+        """构建发送 URL。
+
+        优先使用显式配置的接口地址，否则按 SendKey 前缀自动选择：
+        - SCMax: https://{UID}.max.ft07.com/send/{SendKey}
+        - Server酱³: https://{UID}.push.ft07.com/send/{SendKey}.send
+        """
+        if self._api_base:
+            base = self._api_base.rstrip("/")
+            if base.endswith("/send"):
+                return f"{base}/{self._sendkey}"
+            return f"{base}/send/{self._sendkey}"
+        if self._sendkey and self._sendkey.startswith("scx-"):
+            return f"{self.SCMAX_BASE.format(uid=self._uid)}/send/{self._sendkey}"
+        return f"{self.SCT_BASE.format(uid=self._uid)}/send/{self._sendkey}.send"
 
     @staticmethod
     def _build_message_data(
@@ -386,7 +436,7 @@ class ServerChan(_PluginBase):
             url = self._build_send_url()
             data = self._build_message_data(title, text, image, self._tags)
 
-            logger.info(f"Server酱³ 发送消息: {title}")
+            logger.info(f"Server酱 发送消息: {title}")
             res = await AsyncRequestUtils(timeout=self.REQUEST_TIMEOUT).post_res(
                 url=url, data=data
             )
@@ -394,42 +444,46 @@ class ServerChan(_PluginBase):
             return self._handle_response(res, title)
 
         except ConnectionError as e:
-            logger.error(f"Server酱³ 连接错误: {e}")
+            logger.error(f"Server酱 连接错误: {e}")
             return False, f"连接错误: {e}"
         except TimeoutError as e:
-            logger.error(f"Server酱³ 请求超时: {e}")
+            logger.error(f"Server酱 请求超时: {e}")
             return False, f"请求超时: {e}"
         except ValueError as e:
-            logger.error(f"Server酱³ 数据解析错误: {e}")
+            logger.error(f"Server酱 数据解析错误: {e}")
             return False, f"数据解析错误: {e}"
         except Exception as e:
-            logger.error(f"Server酱³ 消息发送异常: {e}")
+            logger.error(f"Server酱 消息发送异常: {e}")
             return False, f"发送异常: {e}"
 
     def _handle_response(self, res: Any, title: str) -> tuple[bool, str]:
         """处理 HTTP 响应。"""
         if not res:
-            logger.warning("Server酱³ 请求失败，无响应")
+            logger.warning("Server酱 请求失败，无响应")
             return False, "请求失败，无响应"
 
         if res.status_code != 200:
-            logger.warning(f"Server酱³ 请求失败，状态码: {res.status_code}")
+            logger.warning(f"Server酱 请求失败，状态码: {res.status_code}")
             if res.text:
                 logger.warning(f"响应内容: {res.text[:self.MAX_LOG_LENGTH]}")
             return False, f"请求失败，状态码: {res.status_code}"
 
         try:
             result = res.json()
-            if result.get("code") == 0:
-                logger.info(f"Server酱³ 消息发送成功: {title}")
+            code = result.get("code", result.get("errno"))
+            message = str(result.get("message") or "")
+            if code == 0 or message.upper() == "SUCCESS":
+                logger.info(f"Server酱 消息发送成功: {title}")
                 return True, "发送成功"
             else:
-                error_msg = result.get("message", "未知错误")
-                logger.warning(f"Server酱³ 消息发送失败: {error_msg}")
+                error_msg = result.get("error") or result.get("message") or "未知错误"
+                logger.warning(f"Server酱 消息发送失败: {error_msg}")
                 return False, error_msg
         except ValueError as e:
-            logger.error(f"Server酱³ 响应解析失败: {e}")
-            return False, f"响应解析失败: {e}"
+            # 接口返回非 JSON（如 "Invalid sendkey"）时，把原文带出来便于排错
+            raw = (res.text or "").strip()[:self.MAX_LOG_LENGTH]
+            logger.error(f"Server酱 响应解析失败: {e}, 原文: {raw}")
+            return False, f"响应解析失败: {raw or e}"
 
     # ---- 消息类型过滤 ----
 
@@ -441,11 +495,11 @@ class ServerChan(_PluginBase):
 
         if isinstance(msg_type, NotificationType):
             if msg_type.name not in self._msgtypes:
-                logger.debug(f"Server酱³ 消息类型 {msg_type.value} 未开启，跳过")
+                logger.debug(f"Server酱 消息类型 {msg_type.value} 未开启，跳过")
                 return False
         elif isinstance(msg_type, str):
             if msg_type not in self._msgtypes:
-                logger.debug(f"Server酱³ 消息类型 {msg_type} 未开启，跳过")
+                logger.debug(f"Server酱 消息类型 {msg_type} 未开启，跳过")
                 return False
 
         return True
@@ -456,11 +510,11 @@ class ServerChan(_PluginBase):
     async def send(self, event: Event) -> None:
         """处理通知消息事件。"""
         if not self.get_state():
-            logger.debug("Server酱³ 插件未启用或参数未配置")
+            logger.debug("Server酱 插件未启用或参数未配置")
             return
 
         if not event.event_data:
-            logger.debug("Server酱³ 事件数据为空")
+            logger.debug("Server酱 事件数据为空")
             return
 
         msg_body = event.event_data
@@ -471,19 +525,19 @@ class ServerChan(_PluginBase):
         image = msg_body.get("image")
 
         if not title and not text:
-            logger.warning("Server酱³ 标题和内容不能同时为空")
+            logger.warning("Server酱 标题和内容不能同时为空")
             return
 
         # 消息类型过滤
         if not self._should_send_message(msg_body):
             return
 
-        logger.info(f"Server酱³ 收到消息: {title}")
+        logger.info(f"Server酱 收到消息: {title}")
         if image:
-            logger.info(f"Server酱³ 附带图片: {image}")
+            logger.info(f"Server酱 附带图片: {image}")
 
         result = await self._async_send_message(title, text, image)
         if result:
             success, msg = result
             if not success:
-                logger.warning(f"Server酱³ 发送失败: {msg}")
+                logger.warning(f"Server酱 发送失败: {msg}")
