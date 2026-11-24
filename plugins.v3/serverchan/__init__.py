@@ -18,7 +18,7 @@ class ServerChan(_PluginBase):
     # 插件图标
     plugin_icon = "icons/serverchan.png"
     # 插件版本
-    plugin_version = "2.3.1"
+    plugin_version = "2.3.2"
     # 插件作者
     plugin_author = "SilentReed"
     # 作者主页
@@ -33,6 +33,16 @@ class ServerChan(_PluginBase):
     # 常量定义
     REQUEST_TIMEOUT = 10
     MAX_LOG_LENGTH = 200
+    # SCMax 单条正文上限 32KB，留出余量给尾部提示
+    MAX_DESP_BYTES = 30000
+    # SCMax / Server酱 常见业务错误码
+    ERROR_MESSAGES = {
+        10002: "SendKey 无效或已失效，请到 SCMax 控制台重新复制",
+        10003: "SendKey 已被禁用",
+        10004: "账户当日推送条数已达上限",
+        10005: "推送内容为空",
+        10006: "推送内容超长",
+    }
 
     # 私有属性
     _enabled: bool = False
@@ -59,7 +69,7 @@ class ServerChan(_PluginBase):
         self._enabled = bool(config.get("enabled"))
         self._onlyonce = bool(config.get("onlyonce"))
         self._sendkey = (config.get("sendkey") or "").strip() or None
-        self._api_base = (config.get("api_base") or "").strip()
+        self._api_base = self._normalize_base(config.get("api_base"))
         self._tags = config.get("tags") or ""
         self._msgtypes = config.get("msgtypes") or []
         # 旧配置没有该字段时默认开启排版优化
@@ -78,6 +88,29 @@ class ServerChan(_PluginBase):
             ).start()
             self._onlyonce = False
             self._save_config()
+
+    @classmethod
+    def _normalize_base(cls, raw: str | None) -> str:
+        """归一化接口地址。
+
+        同时容忍三种常见填法：
+        - https://10325.max.ft07.com
+        - https://10325.max.ft07.com/
+        - https://10325.max.ft07.com/send/scx-10325-xxxx（直接把推送地址整条粘进来）
+        统一收敛为不含尾部 `/send` 的站点根地址；缺 scheme 时补 https://。
+        """
+        value = (raw or "").strip()
+        if not value:
+            return ""
+        if "://" not in value:
+            value = "https://" + value
+        value = value.split("?", 1)[0].split("#", 1)[0].rstrip("/")
+        # 粘贴了完整推送地址：截掉 /send 及其后的 key
+        if "/send/" in value:
+            value = value.split("/send/", 1)[0]
+        elif value.endswith("/send"):
+            value = value[: -len("/send")]
+        return value.rstrip("/")
 
     @classmethod
     def _extract_uid(cls, sendkey: str | None) -> str | None:
@@ -101,10 +134,8 @@ class ServerChan(_PluginBase):
             return False
         if not self._sendkey:
             return False
-        # SCMax（scx- 开头）必须显式填写专属推送地址
-        if self._sendkey.startswith("scx-") and not self._api_base:
-            return False
-        # 其余情况未指定接口地址时，必须能从 SendKey 解析出 UID
+        # 未指定接口地址时必须能从 SendKey 解析出 UID：
+        # SCMax 走 https://{UID}.max.ft07.com，Server酱³ 走 https://{UID}.push.ft07.com
         if not self._api_base and not self._uid:
             return False
         return True
@@ -293,7 +324,7 @@ class ServerChan(_PluginBase):
                                             "model": "sendkey",
                                             "label": "SendKey",
                                             "placeholder": "scx-10325-xxxxxxxxxxxxxxxx 或 sctp123456txxxxxxxx",
-                                            "hint": "SCMax 的 SendKey 形如 scx-{UID}-{TOKEN}（需同时填写接口地址），Server酱³ 形如 sctp{UID}t{TOKEN}（接口地址可留空）",
+                                            "hint": "SCMax 的 SendKey 形如 scx-{UID}-{TOKEN}，Server酱³ 形如 sctp{UID}t{TOKEN}；两种格式均可只填 SendKey，接口地址留空自动识别",
                                         },
                                     }
                                 ],
@@ -311,9 +342,9 @@ class ServerChan(_PluginBase):
                                         "component": "VTextField",
                                         "props": {
                                             "model": "api_base",
-                                            "label": "接口地址（使用 SCMax 时必填）",
+                                            "label": "接口地址（可留空自动识别）",
                                             "placeholder": "https://10325.max.ft07.com",
-                                            "hint": "使用 SCMax（SendKey 以 scx- 开头）时必填：请填写 SCMax 控制台给出的账户专属推送地址，形如 https://{你的UID}.max.ft07.com；使用 Server酱³（sctp 开头）时可留空，插件将自动走 https://{UID}.push.ft07.com。插件会向 {接口地址}/send/{SendKey} 发送",
+                                            "hint": "留空时按 SendKey 前缀自动选择：scx- 走 https://{UID}.max.ft07.com（SCMax），sctp 走 https://{UID}.push.ft07.com（Server酱³）。也可填 SCMax 控制台给出的专属推送地址，整条含 /send/{key} 的地址粘贴进来亦可自动识别",
                                         },
                                     }
                                 ],
@@ -414,11 +445,8 @@ class ServerChan(_PluginBase):
         """校验必要配置项，返回错误信息或 None。"""
         if not self._sendkey:
             return "请填写 SendKey"
-        if self._sendkey.startswith("scx-") and not self._api_base:
-            return (
-                "使用 SCMax 的 SendKey（scx- 开头）时必须填写接口地址，"
-                "请登录 SCMax 控制台复制账户专属推送地址，形如 https://{你的UID}.max.ft07.com"
-            )
+        if self._api_base and not self._api_base.startswith(("http://", "https://")):
+            return f"接口地址格式不正确：{self._api_base}"
         if self._uid is None and not self._api_base:
             return (
                 "无法从 SendKey 提取 UID，请检查格式："
@@ -518,11 +546,30 @@ class ServerChan(_PluginBase):
             "title": title,
             "desp": desp,
         }
-        if tags:
-            data["tags"] = tags
         if image:
             data["desp"] += f"\n\n![封面]({image})"
+        data["desp"] = self._truncate_desp(data["desp"])
+        if tags:
+            data["tags"] = tags
         return data
+
+    @classmethod
+    def _truncate_desp(cls, desp: str) -> str:
+        """按 UTF-8 字节数截断正文，避免 SCMax 因超长整条拒收。"""
+        raw = desp or ""
+        if len(raw.encode("utf-8")) <= cls.MAX_DESP_BYTES:
+            return raw
+        tail = "\n\n…（内容过长已截断，请到 MoviePilot 查看完整记录）"
+        budget = cls.MAX_DESP_BYTES - len(tail.encode("utf-8"))
+        out = []
+        used = 0
+        for line in raw.split("\n"):
+            b = len((line + "\n").encode("utf-8"))
+            if used + b > budget:
+                break
+            out.append(line)
+            used += b
+        return "\n".join(out).rstrip() + tail
 
     async def _async_send_message(
         self, title: str, text: str, image: str | None = None
@@ -571,15 +618,29 @@ class ServerChan(_PluginBase):
 
         try:
             result = res.json()
-            code = result.get("code", result.get("errno"))
+            if not isinstance(result, dict):
+                raw = (res.text or "").strip()[:self.MAX_LOG_LENGTH]
+                logger.error(f"Server酱 响应结构异常，原文: {raw}")
+                return False, f"响应结构异常: {raw}"
+            code = result.get("code")
+            if code is None:
+                code = result.get("errno")
             message = str(result.get("message") or "")
-            if code == 0 or message.upper() == "SUCCESS":
-                logger.info(f"Server酱 消息发送成功: {title}")
+            if code in (0, "0") or message.upper() == "SUCCESS":
+                detail = ""
+                meta = result.get("data") or {}
+                if isinstance(meta, dict) and meta.get("pushid"):
+                    detail = f"（pushid {meta['pushid']}）"
+                logger.info(f"Server酱 消息发送成功: {title}{detail}")
                 return True, "发送成功"
-            else:
-                error_msg = result.get("error") or result.get("message") or "未知错误"
-                logger.warning(f"Server酱 消息发送失败: {error_msg}")
-                return False, error_msg
+            raw_msg = result.get("error") or result.get("message") or result.get("errmsg") or "未知错误"
+            try:
+                friendly = self.ERROR_MESSAGES.get(int(code))
+            except (TypeError, ValueError):
+                friendly = None
+            error_msg = f"[{code}] {friendly}" if friendly else f"[{code}] {raw_msg}"
+            logger.warning(f"Server酱 消息发送失败: {error_msg}")
+            return False, error_msg
         except ValueError as e:
             # 接口返回非 JSON（如 "Invalid sendkey"）时，把原文带出来便于排错
             raw = (res.text or "").strip()[:self.MAX_LOG_LENGTH]
