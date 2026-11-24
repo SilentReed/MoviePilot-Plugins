@@ -1,15 +1,14 @@
 {
   "ServerChan": {
     "name": "Server酱³通知",
-    "description": "通过 Server酱³ / SCMax 发送消息通知，支持 APP 推送（只填 SendKey 即可，接口地址留空自动识别）",
+    "description": "通过 Server酱³ / SCMax 发送消息通知，支持 APP 推送（scx- 前缀需填专属接口地址）",
     "labels": "通知,Server酱",
-    "version": "2.3.2",
+    "version": "2.3.1",
     "icon": "icons/serverchan.png",
     "author": "SilentReed",
     "level": 1,
     "system_version": ">=3.0.0",
     "history": {
-      "v2.3.2": "SCMax 兼容增强：接口地址可留空自动按 scx-/sctp 前缀推导域名；支持整条推送地址粘贴并自动归一化；业务错误码映射中文提示（如 10002 SendKey 无效）；正文超 30KB 自动截断，避免整条被拒收；成功日志附带 pushid。",
       "v2.3.1": "排版优化升级为通用规则：对所有通知生效，支持任意多字段行拆行，仅调整换行不改动原文文字，表格/代码块保持原结构。",
       "v2.3.0": "新增正文排版优化开关：去重标题、条目拆行、补足换行，修复微信端多行被合并的问题。",
       "v2.2.1": "使用 SCMax（scx- 开头 SendKey）时「接口地址」改为必填，需填入账户专属推送地址（如 https://{UID}.max.ft07.com）；Server酱³ 仍可留空自动判断。",

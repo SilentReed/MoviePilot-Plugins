@@ -42,8 +42,8 @@ AIGC:
 
 | 参数 | 说明 | 获取方式 |
 |------|------|----------|
-| SendKey | 支持两种格式：SCMax 的 `scx-{UID}-{TOKEN}`、Server酱³ 的 `sctp{UID}t{TOKEN}`，只需填这一项 | SCMax: [https://max.ft07.com/](https://max.ft07.com/) ｜ Server酱³: [https://sc3.ft07.com/](https://sc3.ft07.com/) |
-| 接口地址 | **可留空**，插件按 SendKey 前缀自动识别；也可填 SCMax 账户专属推送地址。支持直接粘贴整条推送地址，插件会自动截取站点根地址。请求 `{接口地址}/send/{SendKey}` | SCMax 控制台首页可见，例：`https://10325.max.ft07.com` |
+| SendKey | 支持两种格式：SCMax 的 `scx-{UID}-{TOKEN}`（需同时填接口地址）、Server酱³ 的 `sctp{UID}t{TOKEN}` | SCMax: [https://max.ft07.com/](https://max.ft07.com/) ｜ Server酱³: [https://sc3.ft07.com/](https://sc3.ft07.com/) |
+| 接口地址 | **使用 SCMax（`scx-` 开头）时必填**，填写账户专属推送地址；Server酱³（`sctp` 开头）可留空自动判断。插件向 `{接口地址}/send/{SendKey}` 发送 | SCMax 控制台首页可见，例：`https://10325.max.ft07.com` |
 | 标签 | 消息标签列表 | 多个标签用竖线(\|)分隔 |
 | 消息类型 | 选择需要接收的通知类型 | 不选则接收所有 |
 | 正文排版优化 | 默认开启，整理换行与条目格式 | 建议保持开启 |
@@ -52,7 +52,7 @@ AIGC:
 
 | SendKey 前缀 | 接口地址 | 请求地址 |
 |--------------|----------|----------|
-| `scx-` | 可留空 | 留空时 `https://{UID}.max.ft07.com/send/{SendKey}`（SCMax）；已填则 `{接口地址}/send/{SendKey}` |
+| `scx-` | 必填 | `{接口地址}/send/{SendKey}`（SCMax） |
 | `sctp` | 可留空 | 留空时 `https://{UID}.push.ft07.com/send/{SendKey}.send`（Server酱³） |
 | 任意 | 已填 | `{接口地址}/send/{SendKey}` |
 
@@ -63,15 +63,6 @@ AIGC:
 3. 在插件市场搜索「Server酱通知」并安装
 
 ## 版本历史
-
-### v2.3.2
-
-- 接口地址改为**可留空**：按 SendKey 前缀自动推导域名（`scx-` → `https://{UID}.max.ft07.com`，`sctp` → `https://{UID}.push.ft07.com`），配置只需填 SendKey
-- 接口地址自动归一化：兼容尾部 `/`、缺 scheme、以及直接粘贴整条推送地址（含 `/send/{key}`）等填法
-- 业务错误码映射中文提示：如 `10002` → SendKey 无效或已失效，未知码保留原始 `error` 文本并带出码值
-- 正文超过 30KB 自动按行截断并追加提示，避免 SCMax 因超长整条拒收（此前会直接发送失败）
-- 成功日志附带 `pushid`，与 SCMax 控制台推送记录可直接对应
-- 响应判定健壮性：`code` 缺失时回退 `errno`，非字典响应不再抛异常
 
 ### v2.3.1
 
